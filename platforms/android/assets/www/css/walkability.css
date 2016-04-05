@@ -1,0 +1,45 @@
+#boton1{ 
+  position: right; 
+  width: 50px; 
+  height: 20px; 
+  box-shadow: none;   
+  left: -5px; 
+  top: 0; 
+  margin-top: 6px !important; 
+}
+
+.header{
+  height: 40px;
+}
+
+#panel1, .panel_li1{
+  background-color: grey !important;
+  text-shadow:none !important;
+  color: white !important;
+}
+
+.modal {
+    display:    none;
+    position:   fixed;
+    z-index:    1000;
+    top:        0;
+    left:       0;
+    height:     100%;
+    width:      100%;
+    background: rgba( 255, 255, 255, .8 ) 
+                url('images/ajax-loader.gif') 
+                50% 50% 
+                no-repeat;
+}
+
+/* When the body has the loading class, we turn
+   the scrollbar off with overflow:hidden */
+body.loading {
+    overflow: hidden;   
+}
+
+/* Anytime the body has the loading class, our
+   modal element will be visible */
+body.loading .modal {
+    display: block;
+}
