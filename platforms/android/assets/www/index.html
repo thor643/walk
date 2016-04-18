@@ -10,55 +10,64 @@
 		<script src="js/jquery-2.2.1.min.js"></script> 
 		<script src="js/jquery.mobile-1.4.5.min.js"></script>
 		<script src="js/bootstrap.min.js"></script>
-		<!--<script>
-			$(document).on("pagecreate", function(event){ // When entering pagetwo
-					alert('Pagecreate');
-                    var d = new Date();
-                    var n = d.getDay();
-
-                    if (n == 3) {
-                        $(':mobile-pagecontainer').pagecontainer('change', '#app', {showLoadMsg: true});
-                    }
-                });
-		</script>-->
 		<script type="text/javascript" src="js/init.js"></script>
 		<script type="text/javascript" src="js/data_base.js"></script>
 		<script type="text/javascript" src="js/pselect.min.js"></script>
 	</head>
-	<!--<body onload="getLocation()">-->
 	<body>
 		<div class="modal"></div>
-		<div data-role = "page" data-theme="a" id="testInicial">
+
+		<div data-role="page" data-theme="a" id="textoInicial">
+
 			<div data-role="header" class="header" data-position="fixed">
 				<h1 style="width: 100%; text-align: justify;">Walkability Capturer</h1>
-				<!--<a href="#app" id="boton" data-icon="arrow-r" data-iconpos="notext" onclick="initMap()"></a>-->
-				<a id="boton" data-icon="arrow-r" data-iconpos="notext"></a>
+				<a id="botonTexto" data-icon="arrow-r" data-iconpos="notext"></a>
 			</div>
+
+			<div data-role="main" class="ui-content">
+				<p align="center">¡Ayúdanos a entender cómo se mueve la gente a pie por la ciudad!</p>
+				<p align="center">Walkability Capturer detecta tus rutas a pie. Como máximo una vez al día, te preguntaremos acerca de alguna ruta que hayas realizado: sobre tus razones para ir a pie y sobre qué te ha parecido el recorrido. Usando esta app te harás más consciente de cuándo y por dónde caminas, una alternativa saludable y sostenible. Y además colaboras con la investigación científica para que podamos entender la movilidad urbana y ayudar a diseñar mejor las ciudades del futuro.</p>
+				<p align="center">Te recordamos que tu participación es anónima.</p>
+				<p align="center">¡Muchas gracias por tu colaboración!</p>
+			</div>
+
+		</div>
+
+		<div data-role = "page" data-theme="a" id="testInicial">
+
+			<div data-role="header" class="header" data-position="fixed">
+				<h1 style="width: 100%; text-align: justify;">Walkability Capturer</h1>
+				<a id="botonTest" data-icon="arrow-r" data-iconpos="notext"></a>
+			</div>
+
 			<div data-role="main" class="ui-content">
 				<form>
 					<fieldset data-role="controlgroup" id="genero">
 						<legend>Indícanos tu género, por favor</legend>
 							<label for="hombre">Hombre</label>
-							<input type="radio" name="genero" id="hombre" value="hombre" checked>
+							<input type="radio" name="genero" id="hombre" value="0" checked>
 							<label for="mujer">Mujer</label>
-							<input type="radio" name="genero" id="mujer" value="mujer">
+							<input type="radio" name="genero" id="mujer" value="1">
 					</fieldset>
 					<legend>¿Nos podrías decir tu año de nacimiento?</legend>
 					<select id="anyoNacimiento"><option></option></select>
 					<legend>¿De dónde eres?</legend>
 					<select class="ps-prov"></select>
 					<select class="ps-mun"></select>
+					<legend>¿Cuándo quiere que le avisemos para responder los cuestionarios?</legend>
+					<input type="time" name="hora" id="hora" value="00:00:00" max="23:59:59" min="00:00:00" step="1">
 					<fieldset data-role="controlgroup" id="movilidad">
 						<legend>Y finalmente, ¿nos puedes decir si tienes algún problema de salud que te haga más difícil desplazarte andando?</legend>
 						<label for="no">No, ninguno</label>
-						<input type="radio" name="problemaDesp" id="no" value="no" checked>
+						<input type="radio" name="problemaDesp" id="no" value="0" checked>
 						<label for="siTemp">Sí, pero es un problema temporal</label>
-						<input type="radio" name="problemaDesp" id="siTemp" value="siTemp">
+						<input type="radio" name="problemaDesp" id="siTemp" value="1">
 						<label for="si">Sí, y es un problema permanente</label>
-						<input type="radio" name="problemaDesp" id="si" value="si">
+						<input type="radio" name="problemaDesp" id="si" value="2">
 					</fieldset>
 				</form>
 			</div>
+
 		</div>
 
 		<div data-role = "page" data-theme="a" id="app">
@@ -70,13 +79,15 @@
 
 			<div data-role="panel" id="panel" data-position="left" data-display="overlay">
 				<ul data-role = "listview">
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="inicio">Inicio</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="rutas">Rutas realizadas</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" onclick="Test_Screen()">Configuración</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="acerca">Acerca de...</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="seguimiento">Iniciar Geo.</a></li>
-					<!--<li data-icon = "false"><a href = "#" class = "panel_li" onclick="posicionInstantanea()">Iniciar Geo.</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" onclick="pararSeguimiento()">Parar Geo.</a></li>-->
+					<li data-icon = "false"><a href = "#principal" class = "panel_li" id="btnInicio">Inicio</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnRutas">Rutas realizadas</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnConfiguracion">Configuración</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnCuestionario">Cuestionario</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnPrueba">Pruebas</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnAcerca">Acerca de...</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnSeguimiento">Iniciar Geo.</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnRuta">Insertar ruta</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnBorrar">Borrar BD</a></li>
 				</ul>
 			</div>
 
@@ -84,18 +95,32 @@
 				<div id="mapa" class="map"></div>
 			</div>
 
-			<div style="overflow-y: scroll" id="prueba" class="prueba">
-			<h1>prueba</h1><br>
-				
+			<div style="overflow-y: scroll" id="rutas">
+				<h1>Rutas realizadas</h1>
+				<select id="slcRutas"><option></option></select>
+				<div style="overflow-y: scroll; width: 200px; height: 200px" id="mapaRuta"></div>
 			</div>
 
+			<div style="overflow-y: scroll" id="cuestionario">
+				<h1>Cuestionario</h1>
+			</div>
 
-			
+			<div style="overflow-y: scroll" id="pruebas">
+				<h1>Pruebas</h1><br>
+			</div>
+
+			<div style="overflow-y: scroll; margin-top: 10px; margin-right: 10px; margin-left: 10px;" id="acerca">
+				<h1 style="text-align: center;">Acerca de...</h1>
+				<p align="justify">La aplicación Walkability Capturer tiene como objetivo la investigación para la mejora de la calidad de vida urbana. Concretamente, queremos entender cuándo y por dónde camina la gente por su ciudad, y qué razones les llevan a escoger unas rutas concretas.</p>
+				<p align="justify">Instalando y usando esta aplicación nos ayudarás a avanzar en la investigación científica y ¡harás del mundo un lugar mejor! Además, al usar la aplicación podrás hacerte más consciente de tus rutas a pie y de cómo tomas tus decisiones de movilidad.</p>
+				<p align="justify">Esta app forma parte del proyecto City4All (la ciudad para tod@s), del equipo CRIM-AP de la Universidad del País Vasco UPV/EHU. Puedes consultar detalles sobre el equipo de investigación en <a href="http://www.ehu.eus/es/web/dms/equipo">http://www.ehu.eus/es/web/dms/equipo</a>. Esta investigación ha obtenido el informe favorable del Comité de Ética para las Investigaciones relacionadas con Seres Humanos de la UPV/EHU.</p>
+				<p align="justify">Tu participación es voluntaria y la información se recoge en todo caso de manera anómina; no te pediremos ni recogeremos ningún dato que nos permita saber quién eres. La información recopilada es para uso exclusivo del equipo investigador. Nunca cederemos información a terceras partes, y la instalación y uso de esta app es y será siempre gratuita, ya que no tenemos ningún fin comercial.</p>
+				<p align="justify">Desarrollador app: David Puerto</p>
+				<p align="justify">Contacto con el equipo investigador para solventar cualquier duda: <a href="mailto:responsable.epd@ehu.eus">responsable.epd@ehu.eus</a></p>
+			</div>
+
 		</div>
-
-		
 		<script type="text/javascript" src="js/geolocation.js"></script>
 		<script type="text/javascript" src="js/walkability.js"></script>
-
 	</body>
 </html>
