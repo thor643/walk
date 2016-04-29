@@ -2,6 +2,15 @@ var db;
 var res;
 var error;
 
+var vel_max;
+var dist_min_ruta;
+var tiempo_parada;
+var radio_parada;
+var puntos_distintos;
+var dist_puntos;
+
+
+
 function abrirBD(){
 	db = window.sqlitePlugin.openDatabase({name: 'walkability.db', androidLockWorkaround: 1, location: 1});
 }
@@ -11,7 +20,7 @@ function inicializarBD(){
 	db.transaction(function(tx) {
     	tx.executeSql('PRAGMA foreign_keys = ON');
     	tx.executeSql('DROP TABLE IF EXISTS "usuario"');
-    	tx.executeSql('CREATE TABLE IF NOT EXISTS "usuario"("idusuario" TEXT PRIMARY KEY NOT NULL, "anyo_nacimiento" INTEGER, "genero" NUMERIC, "municipio_procedencia" TEXT, "movilidad_reducida" INTEGER, "en_servidor" NUMERIC)');
+    	tx.executeSql('CREATE TABLE IF NOT EXISTS "usuario"("idusuario" TEXT PRIMARY KEY NOT NULL, "anyo_nacimiento" INTEGER, "genero" NUMERIC, "municipio_procedencia" TEXT, "movilidad_reducida" NUMERIC, "en_servidor" NUMERIC)');
     	tx.executeSql('DROP TABLE IF EXISTS "configuracion"');
     	tx.executeSql('CREATE TABLE IF NOT EXISTS "configuracion"("idconfiguracion" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "vel_max" INTEGER, "dist_min_ruta" INTEGER, "tiempo_parada" INTEGER, "radio_parada" INTEGER, "puntos_distintos" INTEGER, "dist_puntos" INTEGER, "realizar_cuestionario" INTEGER, "version_actual" INTEGER)');
     	tx.executeSql('DROP TABLE IF EXISTS "punto"');
@@ -22,7 +31,7 @@ function inicializarBD(){
     	tx.executeSql('CREATE INDEX "ruta.fk_ruta_punto2_idx" ON "ruta"("punto_fin")');
     	tx.executeSql('CREATE INDEX "ruta.fk_ruta_ruta1_idx" ON "ruta"("copia_de")');
     	tx.executeSql('DROP TABLE IF EXISTS "fecha_ruta"');
-    	tx.executeSql('CREATE TABLE IF NOT EXISTS "fecha_ruta"("idfecha_ruta" TEXT PRIMARY KEY NOT NULL, "dia" TEXT, "hora" TEXT, "idruta" TEXT NOT NULL, CONSTRAINT "fk_fecha_ruta_ruta1" FOREIGN KEY("idruta") REFERENCES "ruta"("idruta"))');
+    	tx.executeSql('CREATE TABLE IF NOT EXISTS "fecha_ruta"("idfecha_ruta" TEXT PRIMARY KEY NOT NULL, "dia" INTEGER, "hora" INTEGER, "idruta" TEXT NOT NULL, "en_servidor" NUMERIC, CONSTRAINT "fk_fecha_ruta_ruta1" FOREIGN KEY("idruta") REFERENCES "ruta"("idruta"))');
     	tx.executeSql('CREATE INDEX "fecha_ruta.fk_fecha_ruta_ruta1_idx" ON "fecha_ruta"("idruta")');
     	tx.executeSql('DROP TABLE IF EXISTS "fecha_cuestionario"');
     	tx.executeSql('CREATE TABLE IF NOT EXISTS "fecha_cuestionario"("idfecha_cuestionario" TEXT PRIMARY KEY NOT NULL, "dia" TEXT, "hora" TEXT, "version" INTEGER)');
@@ -125,8 +134,10 @@ function comprobarVersionConfig(){
 				if (cambiar == 0) {
 					console.log("COINCIDE");
 				}else{
-					console.log("CAMBIAR CONFIGURACION");
-					actualizarConfig(data[0]);
+					if (cambiar == 1) {
+						console.log("CAMBIAR CONFIGURACION");
+						actualizarConfig(data[0]);
+					}
 				}
 			},
 			error: function(e){console.log("ERROR");},
@@ -135,65 +146,53 @@ function comprobarVersionConfig(){
 }
 
 function actualizarConfig(data){
+
+
+	vel_max = data.vel_max;
+	dist_min_ruta = data.dist_min_ruta; 
+	tiempo_parada = data.tiempo_parada;
+	radio_parada = data.radio_parada;
+	puntos_distintos = data.puntos_distintos; 
+	dist_puntos = data.dist_puntos; 
+
 	db.transaction(function(tx) {
-    		tx.executeSql('UPDATE configuracion SET vel_max = ?, dist_min_ruta = ?, tiempo_parada = ?, radio_parada = ?, puntos_distintos = ?, dist_puntos = ?, version_actual = ? WHERE idconfiguracion = 1', [data.vel_max, data.dist_min_ruta, data.tiempo_parada, data.radio_parada, data.puntos_distintos, data.dist_puntos, data.version_actual], function(tx, rs) {
+    		tx.executeSql('UPDATE configuracion SET vel_max = ?, dist_min_ruta = ?, tiempo_parada = ?, radio_parada = ?, puntos_distintos = ?, dist_puntos = ?, version_actual = ? WHERE idconfiguracion = 1', [vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, data.version_actual], function(tx, rs) {
    				res = rs;
   			});
 		}, function(err){console.log('ERROR solicitarConfig: ' + err.message);}, function(){console.log('TODO OK actualizarConfig');});
 }
 
-$(document).ready(function(e) {
 
-	$("#botonTest").on("click", function(){
-		if ($("#anyoNacimiento option:selected").val() == -1) {
-			alert("Seleccione un año");
-		} else {
-			if ($(".ps-prov option:selected").val() == -1) {
-				alert("Seleccione una provincia");
-			} else {
-				if ($(".ps-mun option:selected").val() == -1) {
-					alert("Seleccione un municipio");
-				} else {
-					genero = $("#genero label[for="+$("#genero :radio:checked").attr("id")+"]").text();
-					fechaNac = $("#anyoNacimiento option:selected").text();
-					prov = $(".ps-prov option:selected").text(); 
-					mun = $(".ps-mun option:selected").text();
-					mov = $("#movilidad label[for="+$("#movilidad :radio:checked").attr("id")+"]").text();
-					hora = $("#hora").val();
-					navigator.notification.confirm(
-    					"Los datos ofrecidos son:\n -Genero: " + genero +
-						"\n-Fecha de nacimiento: " + fechaNac +
-						"\n-Provincia: " + prov +
-						"\n-Municipio: " + mun +
-						"\n-Problemas de movilidad: " + mov +
-						"\n-Horario cuestionario: " + hora, // message
-     					onConfirm,  // callback to invoke with index of button pressed
-    					'Confirmar datos',           // title
-    					['Sí','No']     // buttonLabels
-					);
-				}
-			}	
-		}
-	});
 
-});
-
-function onConfirm(buttonIndex) {
+function anadirUsuario(buttonIndex) {
     if(buttonIndex == 1){
     	genero = $("#genero :radio:checked").val()
-		fechaNac = parseInt($("#anyoNacimiento option:selected").val()); 
-		mun = $(".ps-mun option:selected").text();
+		fechaNac = parseInt($("#anyoNacimiento option:selected").val());
+		if ($("#check").prop('checked')) {
+			mun = $("#municipio").val();
+		} else {
+			mun = $(".ps-mun option:selected").text();
+		} 
 		mov = $("#movilidad :radio:checked").val();
 		uuid = device.uuid;
 		date = new Date();
 		idusuario = uuid.concat(date.getTime());
 		hora = $("#hora").val();
-		horaMod = hora.replace(/:/g,"");
+		horasMinutos = hora.slice(0,5);
+		horaMod = horasMinutos.replace(/:/g,"");
+		horaInt = parseInt(horaMod);
 
 		db.transaction(function(tx) {
-    	tx.executeSql('INSERT INTO usuario (idusuario, anyo_nacimiento, genero, municipio_procedencia, movilidad_reducida, en_servidor) VALUES (?,?,?,?,?,?)', [idusuario, fechaNac, genero, mun, mov, 0], function(tx, res) {
-      		console.log("insertId: " + res.insertId + " -- probably 1");
-      		console.log("rowsAffected: " + res.rowsAffected + " -- should be 1");
+			tx.executeSql('UPDATE configuracion SET realizar_cuestionario = ? WHERE idconfiguracion = 1', [horaInt], function(tx,rs){});
+		}, function(err) {console.log("ERROR " + err.message);}, function() {});
+
+		db.transaction(function(tx) {
+    	tx.executeSql('INSERT INTO usuario (idusuario, anyo_nacimiento, genero, municipio_procedencia, movilidad_reducida, en_servidor) VALUES (?,?,?,?,?,?)', [idusuario, fechaNac, genero, mun, mov, 0], function(tx, rs) {
+      		console.log("insertId: " + rs.insertId + " -- probably 1");
+      		console.log("rowsAffected: " + rs.rowsAffected + " -- should be 1");
+      		if (rs.rowsAffected == 1) {
+      			enviarUsuario();
+      		}
   		});
 		
 		}, function(err){console.log('ERROR ' + err.message);}, 
@@ -208,6 +207,47 @@ function onConfirm(buttonIndex) {
 		});
 
     }
+}
+
+function enviarUsuario(){
+	var idusuario;
+	var anyo_nacimiento;
+	var genero;
+	var municipio_procedencia;
+	var movilidad_reducida;
+	db.transaction(function(tx) {
+		tx.executeSql('SELECT idusuario, anyo_nacimiento, genero, municipio_procedencia, movilidad_reducida FROM usuario WHERE en_servidor = 0', [], function(tx, rs) {
+			if (rs.rows.length != 0) {
+				data = rs.rows;
+				idusuario = data.item(0).idusuario;
+				anyo_nacimiento = data.item(0).anyo_nacimiento;
+				genero = data.item(0).genero;
+				municipio_procedencia = data.item(0).municipio_procedencia;
+				movilidad_reducida = data.item(0).movilidad_reducida;
+				datos = [{idusuario:idusuario, anyo_nacimiento:anyo_nacimiento, genero:genero, municipio_procedencia:municipio_procedencia, movilidad_reducida:movilidad_reducida}];
+				datosJSON = JSON.stringify(datos);
+				$.ajax({type: "POST",
+						url: "http://galan.ehu.eus/dpuerto001/WEB/enviarUsuario.php",
+						data: {dato:datosJSON},
+						success: function(data){console.log("ENVIADO");
+							if (data[0].insertado == 1) {
+								//cambiar en_servidor
+								console.log("Usuario insertado " + data[0].insertado);
+								db.transaction(function(tx) {
+    								tx.executeSql('UPDATE usuario SET en_servidor = 1 WHERE idusuario = ?', [idusuario], function(tx, rs) {});
+								}, function(err){console.log('ERROR solicitarConfig: ' + err.message);}, function(){console.log('TODO OK');});
+							} else {
+								if (data[0].insertado == 0) {
+								//cambiar en_servidor
+								console.log("Usuario insertado " + data[0].insertado);
+								}
+							}
+						},
+						error: function(e){console.log("ERROR");}
+				});
+			}
+		});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){});
 }
 
 function rutasAlmacenadas(){
@@ -232,7 +272,7 @@ function rellenarSlcRutas(data){
 	}
 }
 
-function recuperarRuta(idruta){
+function recuperarRuta(idruta, div){
 	var inicio;
 	var fin;
 	db.transaction(function(tx){
@@ -252,7 +292,7 @@ function recuperarRuta(idruta){
 			if(rs.rows.length != 0){
 				res = rs.rows;
 				var puntos = new Array();
-				puntos.push(inicio);
+				puntos.push(inicio); 
 				for (var i = 0; i < res.length; i++) {
 					punto = {lat:res.item(i).latitud, lng:res.item(i).longitud};
 					puntos.push(punto);
@@ -262,11 +302,265 @@ function recuperarRuta(idruta){
 						console.log("FIN");
 					}
 				}
-				pintarMapa(puntos);
+				pintarMapa(puntos, div);
 			}
 		});
 	}, function(err){console.log("ERROR: " + err.message)}, function(data){});
 }
+
+function anadirRuta(ruta, distancia, copia_de){
+	var municipio_inicio;
+	var municipio_fin;
+
+	uuid = device.uuid;
+	time = new Date();
+	idruta = uuid.concat(time.getTime());
+	punto_inicio = ruta[0].identificador;
+	punto_fin = ruta[ruta.length-1].identificador;
+
+	var geocoder = new google.maps.Geocoder;
+
+	geocoder.geocode({'location': {lat:ruta[0].latitud, lng:ruta[0].longitud}}, function(results, status) {
+ 		municipio_inicio = results[1].address_components[0].short_name;
+	});
+	geocoder.geocode({'location': {lat:ruta[ruta.length-1].latitud, lng:ruta[ruta.length-1].longitud}}, function(results, status) {
+ 		municipio_fin = results[1].address_components[0].short_name;
+	});
+
+	duracion = calcularDuracion(ruta[0].hora, ruta[ruta.length-1].hora);
+
+	for (var i = 0; i < ruta.length; i++) {
+		insertarPunto(ruta[i].identificador, ruta[i].latitud, ruta[i].longitud, ruta[i].precision);
+	}
+
+	if (copia_de == 0) {
+		db.transaction(function(tx) {
+			tx.executeSql('INSERT INTO ruta (idruta, duracion, distancia_recorrida, cuantas, municipio_inicio, municipio_fin, punto_inicio, punto_fin, en_servidor) VALUES (?,?,?,?,?,?,?,?,?)', [idruta, duracion, distancia, 0, municipio_inicio, municipio_fin, punto_inicio, punto_fin, 0], function(tx, res) {});
+		}, function(err){console.log("ERROR: " + err.message);}, function(){console.log("RUTA INSERTADA");});
+	} else {
+		db.transaction(function(tx) {
+			tx.executeSql('INSERT INTO ruta (idruta, duracion, distancia_recorrida, cuantas, municipio_inicio, municipio_fin, punto_inicio, punto_fin, copia_de, en_servidor) VALUES (?,?,?,?,?,?,?,?,?,?)', [idruta, duracion, distancia, 0, municipio_inicio, municipio_fin, punto_inicio, punto_fin, copia_de, 0], function(tx, res) {});
+		}, function(err){console.log("ERROR: " + err.message);}, function(){console.log("RUTA INSERTADA");});
+	}
+
+	for (var i = 1; i < ruta.length-1; i++) {
+		relacionarPuntoYRuta(idruta, ruta[i].identificador, i, ruta[i].hora);
+	}
+
+	if (copia_de == 0) {
+		insertarFechaRuta(idruta);
+	} else {
+		insertarFechaRuta(copia_de);
+		insertarFechaRuta(idruta);
+		aumentarCuantas(idruta);
+	}
+
+}
+
+function calcularDuracion(inicio, fin){
+	inicioHoras = inicio.substr(0,2);
+	inicioMinutos = inicio.substr(3,2);
+
+	finHoras = fin.substr(0,2);
+	finMinutos = fin.substr(3,2);
+
+	transcurridoHoras = finHoras - inicioHoras;
+	transcurridoMinutos = finMinutos - inicioMinutos;
+
+	if (transcurridoHoras < 0) {
+		transcurridoHoras = 24 + transcurridoHoras;
+	}
+
+	if (transcurridoMinutos < 0) {
+		transcurridoHoras--;
+		transcurridoMinutos = 60 + transcurridoMinutos;
+	}
+
+	horas = transcurridoHoras * 60;
+	duracion = horas + transcurridoMinutos;
+	duracionInt = parseInt(duracion);
+
+	return duracionInt;
+
+}
+
+function insertarPunto(idpunto, latitud, longitud, precision){
+	db.transaction(function(tx) {
+		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', [idpunto, latitud, longitud, precision], function(tx, rs) {});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){console.log("PUNTO INSERTADO");});
+}
+
+function relacionarPuntoYRuta(idruta, idpunto, orden){
+	db.transaction(function(tx) {
+		tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden, hora) VALUES (?,?,?,?)', [idruta, idpunto, orden, hora], function(tx, rs) {});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){console.log("RELACION INSERTADA");});
+}
+
+function insertarFechaRuta(idruta){
+	fecha = new Date();
+	diaHoy = fecha.getDate();
+	mesHoy = fecha.getMonth() + 1;
+	anyoHoy = fecha.getFullYear();
+	fechaHoy = (anyoHoy * 10000) + (mesHoy * 100) + diaHoy;
+
+	hora = fecha.toLocaleTimeString();
+	horasMinutos = hora.slice(0,5);
+	horaMod = horasMinutos.replace(/:/g,"");
+	horaInt = parseInt(horaMod);
+
+	uuid = device.uuid;
+	idfecha_ruta = uuid.concat(fecha.getTime());
+
+	db.transaction(function(tx) {
+		tx.executeSql('INSERT INTO fecha_ruta (idfecha_ruta, dia, hora, idruta) VALUES (?,?,?,?)', [idfecha_ruta, fechaHoy, horaInt, idruta], function(tx, res) {});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){console.log("FECHA_RUTA INSERTADA");});
+}
+
+function aumentarCuantas(idruta){
+	db.transaction(function(tx) {
+		tx.executeSql('SELECT cuantas FROM ruta WHERE idruta = ?', [idruta], function(tx, rs) {
+			if (rs.rows.length != 0) {
+				cuantas = rs.rows.item(0).cuantas;
+				cuantas = cuantas + 1;
+				tx.executeSql('UPDATE ruta SET cuantas = ? WHERE idruta = ?', [cuantas, idruta], function(tx, rs) {});
+			}
+		});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){});
+
+}
+
+function enviarRuta(idfecha_ruta){
+	var rutaFecha;
+	var puntos_intermedios = new Array();
+	var punto_inicio;
+	var punto_fin;
+	var idruta;
+	var idpunto_inicio;
+	var idpunto_fin;
+	var idusuario;
+	db.transaction(function(tx) {
+		tx.executeSql('SELECT * FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE en_servidor = 0 AND idfecha_ruta = ?', [idfecha_ruta], function(tx, rs) {
+			console.log(rs.rows.length);
+			if (rs.rows.length != 0) {
+				idruta = rs.rows.item(0).idruta;
+				duracion = rs.rows.item(0).duracion;
+				distancia_recorrida = rs.rows.item(0).distancia_recorrida;
+				categoria = rs.rows.item(0).categoria;
+				cuantas = rs.rows.item(0).cuantas;
+				municipio_inicio = rs.rows.item(0).municipio_inicio;
+				idpunto_inicio = rs.rows.item(0).punto_inicio;
+				municipio_fin = rs.rows.item(0).municipio_fin;
+				idpunto_fin = rs.rows.item(0).punto_fin;
+				copia_de = rs.rows.item(0).copia_de;
+				dia = rs.rows.item(0).dia;
+				hora = rs.rows.item(0).hora;
+				console.log("SELECT 1");
+				rutaFecha = {idruta:idruta,duracion:duracion,distancia_recorrida:distancia_recorrida,categoria:categoria,cuantas:cuantas,municipio_inicio:municipio_inicio,punto_inicio:idpunto_inicio,municipio_fin:municipio_fin,punto_fin:idpunto_fin,copia_de:copia_de,idfecha_ruta:idfecha_ruta, dia:dia,hora:hora};
+			}
+			console.log("RUTA: " + idruta);
+			tx.executeSql('SELECT * FROM punto_intermedio INNER JOIN punto ON punto_intermedio.idpunto = punto.idpunto WHERE idruta = ? ORDER BY orden ASC', [idruta], function(tx, rs) {
+				console.log(rs.rows.length);
+				console.log("RUTA: " + idruta);
+				if (rs.rows.length != 0) {
+					data = rs.rows;
+					for (var i = 0; i < data.length; i++) {
+						idpunto = data.item(i).idpunto;
+						latitud = data.item(i).latitud;
+						longitud = data.item(i).longitud;
+						precision = data.item(i).precision;
+						orden = data.item(i).orden;
+						hora = data.item(i).hora;
+						console.log("SELECT 2");
+						puntos_intermedios.push({idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision,orden:orden,hora:hora});
+					}
+					console.log("PUNTO INICIO: " + idpunto_inicio);
+					tx.executeSql('SELECT latitud, longitud, precision FROM punto WHERE idpunto = ?', [idpunto_inicio], function(tx, rs) {
+						console.log(rs.rows.length);
+						console.log("PUNTO INICIO: " + idpunto_inicio);
+						if (rs.rows.length != 0) {
+							data = rs.rows;
+							idpunto = data.item(0).idpunto;
+							latitud = data.item(0).latitud;
+							longitud = data.item(0).longitud;
+							precision = data.item(0).precision;
+							console.log("SELECT 3");
+							punto_inicio = {idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision};
+						}
+					});
+					console.log("PUNTO FIN: " + idpunto_fin);
+					tx.executeSql('SELECT latitud, longitud, precision FROM punto WHERE idpunto = ?', [idpunto_fin], function(tx, rs) {
+						console.log(rs.rows.length);
+						console.log("PUNTO FIN: " + idpunto_fin);
+						if (rs.rows.length != 0) {
+							data = rs.rows;
+							idpunto = data.item(0).idpunto;
+							latitud = data.item(0).latitud;
+							longitud = data.item(0).longitud;
+							precision = data.item(0).precision;
+							console.log("SELECT 4");
+							punto_fin = {idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision};
+						}
+					});
+					tx.executeSql('SELECT idusuario FROM usuario', [], function(tx, rs) {
+						if (rs.rows.length != 0) {
+							idusuario = rs.rows.item(0).idusuario;
+						}
+					});
+				}
+			});
+		});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){
+		datos = [{rutaFecha: rutaFecha},{puntos_intermedios:puntos_intermedios},{punto_inicio:punto_inicio},{punto_fin:punto_fin},{idusuario:idusuario}];
+		datosJSON = JSON.stringify(datos);
+		console.log(datosJSON);
+		$.ajax({type: "POST",
+				url: "http://galan.ehu.eus/dpuerto001/WEB/enviarRuta.php",
+				data: {dato:datosJSON},
+				success: function(data){console.log("ENVIADO"); /*Poner atributo en_servidor a 1 en la ruta enviada*/},
+				error: function(e){console.log("ERROR");}
+		});
+	});
+}
+
+//DELETE FROM tabla WHERE id = X
+
+function borrarRuta(idruta){
+	//recuperar idpunto
+	//borrar fecha_ruta
+	//borrar punto_intermedio
+	//borrar ruta
+	//burrar punto
+	db.transaction(function(tx) {
+		tx.executeSql('SELECT punto_inicio, punto_fin FROM ruta WHERE idruta = ? ', [idruta], function(tx, rs) {
+			if (rs.rows.length != 0) {
+
+				punto_inicio = rs.rows.item(0).punto_inicio;
+				punto_fin = rs.rows.item(0).punto_fin;
+				puntos = new Array(punto_inicio, punto_fin);
+
+				tx.executeSql('SELECT idpunto FROM punto_intermedio WHERE idruta = ?', [idruta], function(tx, rs) {
+					if (rs.rows.length != 0) {
+
+						for (var i = 0; i < rs.rows.length; i++) {
+							puntos.push(rs.rows.item(i).idpunto);
+						}
+
+						tx.executeSql('DELETE FROM fecha_ruta WHERE idruta = ?', [idruta], function(tx, rs) {
+							tx.executeSql('DELETE FROM punto_intermedio WHERE idruta = ?', [idruta], function(tx, rs) {
+								tx.executeSql('DELETE FROM ruta WHERE idruta = ?', [idruta], function(tx, rs) {
+									for (var i = 0; i < puntos.length; i++) {
+										tx.executeSql('DELETE FROM punto WHERE idpunto = ?', [puntos[i]], function(tx, rs) {});
+									}
+								});
+							});
+						});
+					}
+				});
+			}
+		});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){});
+}
+
 
 /*
 *
@@ -274,170 +568,27 @@ function recuperarRuta(idruta){
 *
 */
 
-function insertarRutas(){
-	//idpunto, longitud, latitud, precision
+function anadirPunto(idpunto, latitud, longitud){
 	db.transaction(function(tx) {
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452961", 39.2535267042545470, -6.1152058839797974, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452962", 39.2540800000000019, -6.1145900000000006, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452963", 39.2552700000000030, -6.1133300000000004, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452964", 39.2569400000000002, -6.1127300000000009, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452965", 39.2580900000000028, -6.1120800000000006, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452966", 39.2598800000000026, -6.1102200000000009, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452967", 39.2616000000000014, -6.1082400000000003, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452968", 39.2627748793909817, -6.1072719097137451, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14607465452969", 39.2634747253134790, -6.1076098680496216, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529610", 39.2659147862637781, -6.1038279533386230, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529611", 39.2675386776200099, -6.1013254523277283, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529612", 39.2685582628102452, -6.0999709367752075, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529613", 39.2698830784331889, -6.0983562469482422, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529614", 39.2702256990870353, -6.0962319374084473, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529615", 39.2700180504058807, -6.0944697260856628, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529616", 39.2698270130757692, -6.0922810435295105, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529617", 39.2694449368532119, -6.0901299118995667, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529618", 39.2685395740094592, -6.0890623927116394, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529619", 39.2686849312175212, -6.0876139998435974, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529620", 39.2662802689295063, -6.0841459035873413, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529621", 39.2636907000922548, -6.0814261436462402, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529622", 39.2622370108620160, -6.0786420106887817, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529623", 39.2607459097307441, -6.0769334435462952, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529624", 39.2598591256330351, -6.0789021849632263, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529625", 39.2594686878599148, -6.0814288258552551, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529626", 39.2585652729735770, -6.0841271281242371, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529627", 39.2580626785026112, -6.0854065418243408, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529628", 39.2564987974517905, -6.0941103100776672, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529629", 39.2557054208188703, -6.1016848683357239, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529630", 39.2539774071339025, -6.1077868938446045, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529631", 39.2532795433810904, -6.1097341775894165, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529632", 39.2523573556259180, -6.1114910244941711, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529633", 39.2522202726268645, -6.1146962642669678, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529634", 39.2532400806399764, -6.1155787110328674, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["146074654529635", 39.2535121654037482, -6.1152461171150208, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO ruta (idruta, duracion, distancia_recorrida, cuantas, municipio_inicio, municipio_fin, punto_inicio, punto_fin, en_servidor) VALUES (?,?,?,?,?,?,?,?,?)', ["1460746545296", 120, 2000.12, 0, "Torre de Santa Maria", "Torre de Santa Maria", "14607465452961", "146074654529635", 0], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452962",1], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452963",2], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452964",3], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452965",4], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452966",5], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452967",6], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452968",7], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","14607465452969",8], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529610",9], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529611",10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529612",11], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529613",12], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529614",13], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529615",14], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529616",15], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529617",16], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529618",17], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529619",18], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529620",19], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529621",20], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529622",21], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529623",22], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529624",23], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529625",24], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529626",25], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529627",26], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529628",27], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529629",28], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529630",29], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529631",30], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529632",31], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529633",32], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["1460746545296","146074654529634",33], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510801", 39.2535204733188792, -6.1152246594429016, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510802", 39.2531900000000036, -6.1161700000000003, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510803", 39.2520300000000049, -6.1167000000000007, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510804", 39.2516300000000058, -6.1176000000000004, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510805", 39.2514300000000063, -6.1189500000000008, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510806", 39.2507900000000021, -6.1198600000000001, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510807", 39.2499099999999999, -6.1213900000000008, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510808", 39.2491500000000002, -6.1216900000000001, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["1460827510809", 39.2479500000000030, -6.1227300000000007, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108010", 39.2469400000000022, -6.1233400000000007, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108011", 39.2465400000000031, -6.1230300000000009, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108012", 39.2459300000000013, -6.1226900000000004, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108013", 39.2446700000000064, -6.1218300000000001, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108014", 39.2436500000000024, -6.1212300000000006, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108015", 39.2429200000000051, -6.1212900000000001, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108016", 39.2420200000000037, -6.1209300000000004, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108017", 39.2415800000000061, -6.1211900000000004, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108018", 39.2405400000000029, -6.1214200000000005, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108019", 39.2399000000000058, -6.1217700000000006, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108020", 39.2392500000000055, -6.1223500000000008, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108021", 39.2388700000000057, -6.1230100000000007, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108022", 39.2379700000000042, -6.1233400000000007, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108023", 39.2364100000000064, -6.1235800000000005, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108024", 39.2357900000000015, -6.1229900000000006, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108025", 39.2359400000000065, -6.1222400000000006, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108026", 39.2358400000000032, -6.1208300000000007, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108027", 39.2358200000000039, -6.1192800000000007, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108028", 39.2356700000000060, -6.1182200000000009, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108029", 39.2357300000000038, -6.1169000000000002, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108030", 39.2358600000000024, -6.1151500000000008, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108031", 39.2361600000000053, -6.1142600000000007, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108032", 39.2367900000000063, -6.1136200000000009, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108033", 39.2372600000000062, -6.1125300000000005, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108034", 39.2390700000000052, -6.1135400000000004, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108035", 39.2403400000000033, -6.1133700000000006, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108036", 39.2413800000000066, -6.1130900000000006, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108037", 39.2424300000000059, -6.1128800000000005, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108038", 39.2436500000000024, -6.1124300000000007, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108039", 39.2454400000000021, -6.1121100000000004, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108040", 39.2465000000000046, -6.1116500000000009, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108041", 39.2485300000000024, -6.1114500000000005, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108042", 39.2495200000000040, -6.1119500000000002, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108043", 39.2504700000000000, -6.1127400000000005, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108044", 39.2510000000000048, -6.1136300000000006, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108045", 39.2518300000000053, -6.1143300000000007, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108046", 39.2527299999999997, -6.1151500000000008, 10], function(tx, res) {});
-		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', ["14608275108047", 39.2535300000000049, -6.1151800000000005, 10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO ruta (idruta, duracion, distancia_recorrida, cuantas, municipio_inicio, municipio_fin, punto_inicio, punto_fin, en_servidor) VALUES (?,?,?,?,?,?,?,?,?)', ["146082751080", 120, 2000.12, 0, "Torre de Santa Maria", "Torre de Santa Maria", "1460827510801", "14608275108047", 0], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510802",1], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510803",2], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510804",3], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510805",4], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510806",5], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510807",6], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510808",7], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","1460827510809",8], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108010",9], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108011",10], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108012",11], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108013",12], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108014",13], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108015",14], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108016",15], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108017",16], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108018",17], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108019",18], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108020",19], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108021",20], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108022",21], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108023",22], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108024",23], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108025",24], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108026",25], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108027",26], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108028",27], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108029",28], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108030",29], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108031",30], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108032",31], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108033",32], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108034",33], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108035",34], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108036",35], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108037",36], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108038",37], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108039",38], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108040",39], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108041",40], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108042",41], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108043",42], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108044",43], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108045",44], function(tx, res) {});
-    	tx.executeSql('INSERT INTO punto_intermedio (idruta, idpunto, orden) VALUES (?,?,?)', ["146082751080","14608275108046",45], function(tx, res) {});
-    }, function(err) {console.log("ERROR insertarRutas: " + err.message);}, function(data) {console.log("RUTA INSERTADA"); alert("Ruta insertada");});
+		tx.executeSql('INSERT INTO punto (idpunto, latitud, longitud, precision) VALUES (?,?,?,?)', [idpunto, latitud, longitud, 10], function(tx, res) {});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){});
+}
+function anadirRutaPrueba(idruta, punto_inicio, punto_fin){
+	db.transaction(function(tx) {
+		tx.executeSql('INSERT INTO ruta (idruta, punto_inicio, punto_fin, en_servidor) VALUES (?,?,?,?)', [idruta, punto_inicio, punto_fin, 0], function(tx, res) {});
+	}, function(err){console.log("ERROR: " + err.message);}, function(){});
+}
+
+function anadir(idruta, grupo){
+
+	for (var i = 0; i < grupo.length; i++) {
+		anadirPunto(idruta+(i+1), grupo[i].lat, grupo[i].lon);
+	}
+
+	anadirRutaPrueba(idruta, idruta + 1, idruta + grupo.length);
+
+	for (var i = 2; i < grupo.length; i++) {
+		relacionarPuntoYRuta(idruta, idruta+i, i-1);
+	}
+
 }

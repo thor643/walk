@@ -1,5 +1,3 @@
-var x = document.getElementById("prueba");
-
 var map;
 var marker;
 
@@ -28,8 +26,13 @@ function initMap() {
     
 }
 
-function pintarMapa(puntos){
-    mapholder = document.getElementById('mapaRuta');
+function pintarMapa(puntos, div){
+
+    $('#' + div).height((window.innerWidth-20)+'px');
+    $('#' + div).width((window.innerWidth-20)+'px');
+    $('#' + div).css('margin-left','10px');
+    
+    mapholder = document.getElementById(div);
 
     var mapa = new google.maps.Map(mapholder,{
         center:puntos[0],
@@ -58,6 +61,7 @@ function pintarMapa(puntos){
         label: "F",
         map: mapa
     });
+
 }
 
 $(document).ready(function(e) { 
@@ -95,11 +99,16 @@ $(document).ready(function(e) {
                 });
 
                 $("#btnCuestionario").on( "click", function() {
-                    $('#principal').hide();
+                    /*$('#principal').hide();
                     $('#rutas').hide(); 
                     $('#cuestionario').show();
                     $('#pruebas').hide();
-                    $('#acerca').hide(); 
+                    $('#acerca').hide();*/
+                    window.location.href="#cuestionarioPage";
+                });
+
+                $("#botonCuestionario").on("click", function(){
+                    window.location.href="#app";
                 });
 
                 $("#btnPrueba").on( "click", function() {
@@ -124,12 +133,13 @@ $(document).ready(function(e) {
                         pararSeguimiento();
                     } else {
                         $("#btnSeguimiento").text("Parar Geo.");
-                        posicionInstantanea();
+                        iniciarSeguimiento();
                     }
                 });
 
                 $("#btnRuta").on( "click", function() {
-                    insertarRutas();
+                    //insertarRutas();
+                    anadir();
                 });
 
 
@@ -148,7 +158,7 @@ $(document).ready(function(e) {
                 $("#slcRutas").on("change", function(){
                     valor = $("#slcRutas option:selected").val();
                     if (valor != -1) {
-                        recuperarRuta($("#slcRutas option:selected").text());
+                        recuperarRuta($("#slcRutas option:selected").text(), "mapaRuta");
                     }
                 });
        
