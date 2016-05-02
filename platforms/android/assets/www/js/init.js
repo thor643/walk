@@ -13,6 +13,7 @@ function onDeviceReady() {
 	rellenarSelect();
 	abrirBD();
 	existeBD();
+	activarNotificacionMensual();
 
 	document.addEventListener("backbutton", onBackKeyDown, false);
 }
@@ -113,7 +114,7 @@ $(document).ready(function(e) {
 	});
 });
 
-function activarNotificacion(){
+function activarNotificacionDiaria(){
 	db.transaction(function(tx) {
 		tx.executeSql('SELECT realizar_cuestionario FROM configuracion WHERE idconfiguracion = 1', [], function(tx, rs) {
 			if (rs.rows.length != 0) {
@@ -159,6 +160,7 @@ function activarNotificacion(){
 				console.log(_5_segundos);*/
 				cordova.plugins.notification.local.schedule({
 					text: "Verificacion diaria",
+					id: 1,
 					every: "day",
 					//at: _5_segundos
 					at:momento
@@ -166,6 +168,17 @@ function activarNotificacion(){
 			}
 		});
 	}, function(err){console.log("ERROR: " + err.message);}, function(){});
+}
+
+function activarNotificacionMensual(){
+	fecha = new Date();
+	en_un_mes = new Date(fecha.getTime() + 2592000*1000);
+	cordova.plugins.notification.local.schedule({
+		text: "Comprobación mensual de configuración",
+		id: 100,
+		every: "month",
+		at: en_un_mes
+	});
 }
 
 /*

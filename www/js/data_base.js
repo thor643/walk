@@ -71,7 +71,7 @@ function existeUsuario(){
   		tx.executeSql('SELECT * FROM usuario', [], function(tx, rs){
 			if (rs.rows.length == 1) {
 				window.location.href="#app";
-				
+				activarNotificacionDiaria();
 			}else{
 				window.location.href="#textoInicial";
 				$("body").removeClass("loading");
@@ -106,10 +106,7 @@ function solicitarConfig(){
 		version_actual = parseInt(data[0].version);
 
 		db.transaction(function(tx) {
-    		tx.executeSql('INSERT INTO configuracion (vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, version_actual) VALUES (?,?,?,?,?,?,?)', [vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, version_actual], function(tx, res) {
-      				console.log("insertId: " + res.insertId + " -- probably 1");
-      				console.log("rowsAffected: " + res.rowsAffected + " -- should be 1");
-  			});
+    		tx.executeSql('INSERT INTO configuracion (vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, version_actual) VALUES (?,?,?,?,?,?,?)', [vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, version_actual], function(tx, rs) {});
 		}, function(err){console.log('ERROR solicitarConfig: ' + err.message);}, function(){console.log('TODO OK solicitarConfig');});
 	});
 }
@@ -121,27 +118,27 @@ function comprobarVersionConfig(){
 		tx.executeSql('SELECT version_actual FROM configuracion', [], function(tx, rs){
 			version = rs.rows.item(0).version_actual;
 		});
-	}, function(err){console.log('ERROR comprobarVersionConfig1: ' + err.message);}, 
+	}, function(err){console.log('ERROR comprobarVersionConfig: ' + err.message);}, 
 	
 	function(){
 		console.log('TODO OK comprobarVersionConfig');
 		$.ajax({type: "POST", 
-			url: "http://galan.ehu.eus/dpuerto001/WEB/comprobarVersionConfig.php",
-			data: {dato:version},
-			success: function(data){
-				cambiar = parseInt(data[0].cambiar);
+				url: "http://galan.ehu.eus/dpuerto001/WEB/comprobarVersionConfig.php",
+				data: {dato:version},
+				success: function(data){
+					cambiar = parseInt(data[0].cambiar);
 
-				if (cambiar == 0) {
-					console.log("COINCIDE");
-				}else{
-					if (cambiar == 1) {
-						console.log("CAMBIAR CONFIGURACION");
-						actualizarConfig(data[0]);
+					if (cambiar == 0) {
+						console.log("COINCIDE");
+					}else{
+						if (cambiar == 1) {
+							console.log("CAMBIAR CONFIGURACION");
+							actualizarConfig(data[0]);
+						}
 					}
-				}
-			},
-			error: function(e){console.log("ERROR");},
-			});
+				},
+				error: function(e){console.log("ERROR");},
+		});
 	});
 }
 
@@ -156,10 +153,8 @@ function actualizarConfig(data){
 	dist_puntos = data.dist_puntos; 
 
 	db.transaction(function(tx) {
-    		tx.executeSql('UPDATE configuracion SET vel_max = ?, dist_min_ruta = ?, tiempo_parada = ?, radio_parada = ?, puntos_distintos = ?, dist_puntos = ?, version_actual = ? WHERE idconfiguracion = 1', [vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, data.version_actual], function(tx, rs) {
-   				res = rs;
-  			});
-		}, function(err){console.log('ERROR solicitarConfig: ' + err.message);}, function(){console.log('TODO OK actualizarConfig');});
+    		tx.executeSql('UPDATE configuracion SET vel_max = ?, dist_min_ruta = ?, tiempo_parada = ?, radio_parada = ?, puntos_distintos = ?, dist_puntos = ?, version_actual = ? WHERE idconfiguracion = 1', [vel_max, dist_min_ruta, tiempo_parada, radio_parada, puntos_distintos, dist_puntos, data.version_actual], function(tx, rs) {});
+		}, function(err){console.log('ERROR actualizarConfig: ' + err.message);}, function(){console.log('TODO OK actualizarConfig');});
 }
 
 
@@ -184,18 +179,11 @@ function anadirUsuario(buttonIndex) {
 
 		db.transaction(function(tx) {
 			tx.executeSql('UPDATE configuracion SET realizar_cuestionario = ? WHERE idconfiguracion = 1', [horaInt], function(tx,rs){});
-		}, function(err) {console.log("ERROR " + err.message);}, function() {});
+		}, function(err){console.log("ERROR UPDATE anadirUsuario" + err.message);}, function(){console.log("TODO OK UPDATE anadirUsuario")});
 
 		db.transaction(function(tx) {
-    	tx.executeSql('INSERT INTO usuario (idusuario, anyo_nacimiento, genero, municipio_procedencia, movilidad_reducida, en_servidor) VALUES (?,?,?,?,?,?)', [idusuario, fechaNac, genero, mun, mov, 0], function(tx, rs) {
-      		console.log("insertId: " + rs.insertId + " -- probably 1");
-      		console.log("rowsAffected: " + rs.rowsAffected + " -- should be 1");
-      		if (rs.rowsAffected == 1) {
-      			enviarUsuario();
-      		}
-  		});
-		
-		}, function(err){console.log('ERROR ' + err.message);}, 
+    	tx.executeSql('INSERT INTO usuario (idusuario, anyo_nacimiento, genero, municipio_procedencia, movilidad_reducida, en_servidor) VALUES (?,?,?,?,?,?)', [idusuario, fechaNac, genero, mun, mov, 0], function(tx, rs) {});
+		}, function(err){console.log('ERROR INSERT anadirUsuario ' + err.message);}, 
 		function(){
 			console.log('USUARIO INSERTADO');
 			navigator.notification.alert(
@@ -204,6 +192,8 @@ function anadirUsuario(buttonIndex) {
     			'Usuario creado',            // title
     			'Aceptar'                  // buttonName
 			);
+			activarNotificacionDiaria();
+			enviarUsuario();
 		});
 
     }
@@ -229,25 +219,26 @@ function enviarUsuario(){
 				$.ajax({type: "POST",
 						url: "http://galan.ehu.eus/dpuerto001/WEB/enviarUsuario.php",
 						data: {dato:datosJSON},
-						success: function(data){console.log("ENVIADO");
-							if (data[0].insertado == 1) {
-								//cambiar en_servidor
-								console.log("Usuario insertado " + data[0].insertado);
-								db.transaction(function(tx) {
-    								tx.executeSql('UPDATE usuario SET en_servidor = 1 WHERE idusuario = ?', [idusuario], function(tx, rs) {});
-								}, function(err){console.log('ERROR solicitarConfig: ' + err.message);}, function(){console.log('TODO OK');});
-							} else {
-								if (data[0].insertado == 0) {
-								//cambiar en_servidor
-								console.log("Usuario insertado " + data[0].insertado);
-								}
-							}
-						},
-						error: function(e){console.log("ERROR");}
+						success: function(data){
+									console.log("ENVIADO");
+									if (data[0].insertado == 1) {
+										//cambiar en_servidor
+										console.log("Usuario insertado en el servidor");
+										db.transaction(function(tx) {
+    										tx.executeSql('UPDATE usuario SET en_servidor = 1 WHERE idusuario = ?', [idusuario], function(tx, rs) {});
+										}, function(err){console.log('ERROR UPDATE enviarUsuario: ' + err.message);}, function(){console.log('TODO OK UPDATE enviarUsuario');});
+									} else {
+										if (data[0].insertado == 0) {
+											//cambiar en_servidor
+											console.log("Usuario no insertado en el servidor");
+										}
+									}
+								},
+						error: function(e){console.log("ERROR al enviar el usuario o al insertarlo en el servidor");}
 				});
 			}
 		});
-	}, function(err){console.log("ERROR: " + err.message);}, function(){});
+	}, function(err){console.log("ERROR SELECT enviarUsuario: " + err.message);}, function(){console.log("TODO OK SELECT enviarUsuario")});
 }
 
 function rutasAlmacenadas(){
@@ -261,7 +252,7 @@ function rutasAlmacenadas(){
 				document.getElementById('slcRutas').options[0] = new Option("Seleccione una ruta", -1);
 			}
 		});
-	});
+	}, function(err){console.log("ERROR SELECT rutasAlmacenadas: " + err.message);}, function(){console.log("TODO OK SELECT rutasAlmacenadas")});
 }
 
 function rellenarSlcRutas(data){
@@ -305,7 +296,7 @@ function recuperarRuta(idruta, div){
 				pintarMapa(puntos, div);
 			}
 		});
-	}, function(err){console.log("ERROR: " + err.message)}, function(data){});
+	}, function(err){console.log("ERROR recuperarRuta: " + err.message)}, function(data){console.log("TODO OK recuperarRuta")});
 }
 
 function anadirRuta(ruta, distancia, copia_de){
@@ -412,7 +403,7 @@ function insertarFechaRuta(idruta){
 	idfecha_ruta = uuid.concat(fecha.getTime());
 
 	db.transaction(function(tx) {
-		tx.executeSql('INSERT INTO fecha_ruta (idfecha_ruta, dia, hora, idruta) VALUES (?,?,?,?)', [idfecha_ruta, fechaHoy, horaInt, idruta], function(tx, res) {});
+		tx.executeSql('INSERT INTO fecha_ruta (idfecha_ruta, dia, hora, idruta, en_servidor) VALUES (?,?,?,?,?)', [idfecha_ruta, fechaHoy, horaInt, idruta, 0], function(tx, res) {});
 	}, function(err){console.log("ERROR: " + err.message);}, function(){console.log("FECHA_RUTA INSERTADA");});
 }
 
@@ -561,6 +552,8 @@ function borrarRuta(idruta){
 	}, function(err){console.log("ERROR: " + err.message);}, function(){});
 }
 
+//Select para todo menos lo del dia actual
+//SELECT * FROM fecha_ruta WHERE (dia = 20160420 AND hora < 1200) OR (dia = 20160421 AND hora > 1200) OR dia < 20160420 OR dia > 20160421
 
 /*
 *

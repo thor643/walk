@@ -3,9 +3,16 @@
 *
 *
 */
+var opcion = {seguimiento:false};
 
 document.addEventListener("deviceready", onDeviceReady, false);
 function onDeviceReady() {
+	opcion.watch('seguimiento', function(id, oldval, newval){
+		if (!newval) {
+			pararSeguimiento();
+			iniciarSeguimiento();
+		}
+	});
 	cordova.plugins.notification.local.cancelAll(function(){alert("done");},this);
 	configurarBackgroundGeoLocation();
     backgroundGeoLocation.watchLocationMode(locationCheck);
@@ -13,6 +20,7 @@ function onDeviceReady() {
 	rellenarSelect();
 	abrirBD();
 	existeBD();
+	activarNotificacionMensual();
 
 	document.addEventListener("backbutton", onBackKeyDown, false);
 }
@@ -171,7 +179,7 @@ function activarNotificacionDiaria(){
 
 function activarNotificacionMensual(){
 	fecha = new Date();
-	en_un_mes = new Date(fecha.getTime() + 2592000);
+	en_un_mes = new Date(fecha.getTime() + 2592000*1000);
 	cordova.plugins.notification.local.schedule({
 		text: "Comprobación mensual de configuración",
 		id: 100,

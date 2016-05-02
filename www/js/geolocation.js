@@ -210,10 +210,15 @@ function configurarBackgroundGeoLocation(){
 function iniciarSeguimiento(){
     // Turn ON the background-geolocation system.  The user will be tracked whenever they suspend the app. 
     backgroundGeoLocation.start();
+    opcion.seguimiento = true;
+    mostrarTexto("Seguimiento iniciado<br>");
+    console.log("Seguimiento iniciado");
 }
 
 function pararSeguimiento(){
     backgroundGeoLocation.stop();
+    mostrarTexto("Seguimiento parado<br>");
+    console.log("Seguimiento parado");
 }
 
 //Constructor punto
@@ -283,6 +288,7 @@ function activarTempPunto(){
 
                                     estado = 1;
                                     temporizadorPunto = 0;
+                                    opcion.seguimiento = false;
                                     //backgroundGeoLocation.finish();
                                 }, 900000);
 
@@ -315,6 +321,8 @@ function activarTempParada(latitude, longitude, accuracy, latlon){
                                     estado = 1;
                                     temporizadorParada = 0;
                                     //backgroundGeoLocation.finish();
+                                    pararSeguimiento();
+                                    iniciarSeguimiento();
                                     //PONER VARIABLE tiempo_parada
                                 }, 300000);
 

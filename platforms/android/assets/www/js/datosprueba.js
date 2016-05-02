@@ -300,7 +300,7 @@ function crearRutaPrueba(grupoPuntos){
 		}
 	}
 	distanciaTotal = google.maps.geometry.spherical.computeLength(pathRuta);
-	anadirRuta(ruta, distanciaTotal);
+	anadirRuta(ruta, distanciaTotal, 0);
 }
 
 function PuntoPrueba(latitud, longitud, precision, hora, ident){

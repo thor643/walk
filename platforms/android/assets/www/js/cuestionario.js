@@ -25,7 +25,7 @@ function recuperarRutasRealizadas(hora){
 	console.log("Hora: " + hora);
 
 	db.transaction(function (tx) {
-		tx.executeSql('SELECT idruta FROM  fecha_ruta WHERE (dia = ? AND hora > ?) OR (dia = ? AND hora < ?)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
+		tx.executeSql('SELECT idruta FROM  fecha_ruta WHERE (dia = ? AND hora >= ?) OR (dia = ? AND hora =< ?)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
 			if (rs.rows.length > 0) {
 				recuperarRutasRealizadasNuevas(fechaAyer, fechaHoy, hora);
 			}
@@ -71,11 +71,13 @@ var rutasRecuperadas;
 
 function recuperarRutasRealizadasNuevas(fechaAyer, fechaHoy, hora){
 	db.transaction(function (tx) {
-		tx.executeSql('SELECT fecha_ruta.idruta, fecha_ruta.idfecha_ruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE (dia = ? AND hora > ? AND categoria is NULL AND en_servidor is NULL) OR (dia = ? AND hora < ?  AND categoria is NULL AND en_servidor is NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
+		tx.executeSql('SELECT fecha_ruta.idruta, fecha_ruta.idfecha_ruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE (dia = ? AND hora >= ? AND categoria is NULL AND en_servidor is NULL) OR (dia = ? AND hora <= ?  AND categoria is NULL AND en_servidor is NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
 			if (rs.rows.length > 0) {
 				rutasRecuperadas = rs.rows;
 				if (rutasRecuperadas.length == 1) {
-					realizarCuestionario(rutasRecuperadas.item(0));
+					//Comprobar si esta activa la notificacion. Si esta activa, realizar cuestionario. Sino, activar
+					cordova.plugins.notification.local.isScheduled(10, function(a){if(a){console.log("YES");}else{console.log("NO");}})
+					realizarCuestionario(rutasRecuperadas.item(0).idruta, rutasRecuperadas.item(0).idfecha_ruta);
 				} else {
 					var aleatorio = Math.round(Math.random()*rutasRecuperadas.length);
 					if (aleatorio == data.length) {
@@ -92,7 +94,7 @@ function recuperarRutasRealizadasNuevas(fechaAyer, fechaHoy, hora){
 
 function recuperarRutasRealizadasYNoValoradas(fechaAyer, fechaHoy, hora){
 	db.transaction(function (tx) {
-		tx.executeSql('SELECT fecha_ruta.idruta, fecha_ruta.idfecha_ruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE (dia = ? AND hora > ? AND categoria is NULL) OR (dia = ? AND hora < ?  AND categoria is NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
+		tx.executeSql('SELECT fecha_ruta.idruta, fecha_ruta.idfecha_ruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE (dia = ? AND hora >= ? AND categoria is NULL) OR (dia = ? AND hora <= ?  AND categoria is NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
 			if (rs.rows.length > 0) {
 				rutasRecuperadas = rs.rows;
 				realizarCuestionario();
@@ -105,7 +107,7 @@ function recuperarRutasRealizadasYNoValoradas(fechaAyer, fechaHoy, hora){
 
 function recuperarRutasRealizadasYValoradas(fechaAyer, fechaHoy, hora){
 	db.transaction(function (tx) {
-		tx.executeSql('SELECT fecha_ruta.idruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta INNER JOIN ruta_valorada ON fecha_ruta.idfecha_ruta = ruta_valorada.fecha_ruta_idfecha_ruta INNER JOIN fecha_cuestionario ON ruta_valorada.fecha_cuestionario_idfecha_cuestionario = fecha_cuestionario.idfecha_cuestionario WHERE (fecha_ruta.dia = ? AND fecha_ruta.hora > ? AND ruta.categoria is not NULL AND ruta.en_servidor is not NULL) OR (fecha_ruta.dia = ? AND fecha_ruta.hora < ?  AND ruta.categoria is not NULL AND ruta.en_servidor is not NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
+		tx.executeSql('SELECT fecha_ruta.idruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta INNER JOIN ruta_valorada ON fecha_ruta.idfecha_ruta = ruta_valorada.fecha_ruta_idfecha_ruta INNER JOIN fecha_cuestionario ON ruta_valorada.fecha_cuestionario_idfecha_cuestionario = fecha_cuestionario.idfecha_cuestionario WHERE (fecha_ruta.dia = ? AND fecha_ruta.hora >= ? AND ruta.categoria is not NULL AND ruta.en_servidor is not NULL) OR (fecha_ruta.dia = ? AND fecha_ruta.hora <= ?  AND ruta.categoria is not NULL AND ruta.en_servidor is not NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
 			if (rs.rows.length > 0) {
 				verificarRutas(rs.rows, fechaHoy);
 			}
@@ -138,14 +140,168 @@ function verificarMensualidad(idruta, fechaHoy){
 
 var elegida = true;
 
-function realizarCuestionario(idruta){
-	
-	recuperarRuta(data.item(aleatorio).idruta, "mapaCuestionario");
+function realizarCuestionario(idruta, idfecha_ruta){
+	$("body").addClass("loading");
+	//cambiar redireccion
+	window.location.href="#cuestionarioPage";
+
+	$('#inicioCuestionario').attr("name", idfecha_ruta);
+	$('#categorias').hide();
+	recuperarRuta(idruta, "mapaCuestionario");
+	$("body").removeClass("loading");
 //Cambiar texto label
 
-$("#rdBtnCategoria label[for='cat"+ idcategori +"']").text(textocategoria);
+//$("#rdBtnCategoria label[for='cat"+ idcategori +"']").text(textocategoria);
 }
 
 function realizarCuestionarioMensual(){
 
 }
+
+function activarNotificacionCuestionario(){
+	fecha = new Date();
+	en_un_mes = new Date(fecha.getTime() + 2592000);
+	cordova.plugins.notification.local.schedule({
+		text: "Tienes una ruta pendiente de valoración",
+		id: 10,
+		every: "hour"
+	});
+}
+
+function solicitarPreguntas(categoria, idfecha_ruta){
+	//genero
+	//horario
+	db.transaction(function (tx) {
+		tx.executeSql('SELECT genero FROM usuario', [], function(tx, rs){
+			if (rs.rows.length > 0) {
+				genero = rs.rows.item(0).genero;
+				tx.executeSql('SELECT hora FROM fecha_ruta WHERE idfecha_ruta = ?', [idfecha_ruta], function(tx, rs){
+					if (rs.rows.length > 0) {
+						hora = rs.rows.item(0).hora;
+						if (hora >= 700 || hora <= 2259) {
+							//Mañana
+							horario = 1;
+						} else {
+							//Noche
+							horario = 2;
+						}
+
+						//Pruebas
+						categoria = 4;
+						genero = 0;
+						horario = 1;
+
+						datos = [{categoria:categoria, genero:genero, horario:horario}];
+						datosJSON = JSON.stringify(datos);
+
+						$.ajax({type: "POST", 
+								url: "http://galan.ehu.eus/dpuerto001/WEB/solicitarPreguntas.php",
+								data: {dato:datosJSON},
+								success: function(data){
+											console.log(data);
+											crearCuestionario(data);
+										},
+								error: function(e){console.log("ERROR");},
+						});
+					}
+				});
+			}
+		});
+	}, function(err){console.log("ERROR: " + err.message);}, function () {});
+}
+
+function crearCuestionario(data){
+	for (var i = 0; i < data.length; i++) {
+		var enunciado = $("<legend>", {id:"texto"+ (i+1), text:data[i].textoPregunta});
+		$("#preguntas").append(enunciado);
+		var pregunta = $("<div>", {id:"pregunta"+ (i+1), name:data[i].idPregunta});
+		$("#preguntas").append(pregunta);
+		var tipoRespuesta = data[i].tipoRespuesta;
+		for (var j = 0; j < data[i].respuestas.length; j++) {
+			var respuesta = data[i].respuestas[j];
+			var label = $("<label>", {for: respuesta.idRespuesta, text: respuesta.textoRespuesta});
+			$("#pregunta"+ (i+1)).append(label);
+			if (tipoRespuesta == 0) {
+				var opcion = $("<input>", {type:"radio", name:"pregunta"+ (i+1), id:respuesta.idRespuesta});
+			} else {
+				var opcion = $("<input>", {type:"checkbox", name:"pregunta"+ (i+1), id:respuesta.idRespuesta});
+			}
+			$("#pregunta"+ (i+1)).append(opcion);
+		}
+		$("#pregunta"+ (i+1)).controlgroup();
+	}
+	$("#cuestionario").show();
+	$("body").removeClass("loading");
+}
+
+/*
+var enunciado = $("<legend>", {id:"texto"+ 1, text:"Esto es un enunciado"});
+$("#preguntas").append(enunciado)
+var pregunta = $("<div>", {id:"pregunta"+ 1});
+$("#preguntas").append(pregunta)
+var label = $("<label>", {for: "prueba1", text: "PRUEBA DE FUEGO"})
+$("#pregunta"+ 1).append(label)
+var radio = $("<input>", {type:"radio", name:"pregunta"+ 1 +"", id:"prueba1"})
+$("#pregunta"+ 1).append(radio)
+$("#pregunta"+ 1).controlgroup()
+*/
+
+$(document).ready(function(e) {
+
+	$("#btnSi").on("click", function(){
+		$("body").addClass("loading");
+		$("#btnsCuestionario").hide();
+
+		$.ajax({url: "http://galan.ehu.eus/dpuerto001/WEB/solicitarCategorias.php",
+				success: function(data){
+					categorias = new Array();
+					for (var i = 0; i < data.length; i++) {
+						categorias.push(data[i].categoria);
+					}
+
+					for (var i = 0; i < categorias.length; i++) {
+						$("#rdBtnCategoria label[for='cat"+ (i+1) +"']").text(categorias[i]);
+					}
+
+					$("#categorias").show();
+					$("body").removeClass("loading");
+				},
+				error: function(e){
+					console.log("ERROR");
+					alert("Fallo de conexión. Por favor, inténtelo de nuevo. Si el problema persiste, contáctenos");
+					$("#btnsCuestionario").show();
+					$("body").addClass("loading");
+				}
+		});
+/*
+		$.getJSON('http://galan.ehu.eus/dpuerto001/WEB/solicitarCategorias.php',function(data){
+			categorias = new Array();
+			for (var i = 0; i < data.length; i++) {
+				categorias.push(data[i].categoria);
+			}
+
+			for (var i = 0; i < categorias.length; i++) {
+				$("#rdBtnCategoria label[for='cat"+ (i+1) +"']").text(categorias[i]);
+			}
+
+			$("#categorias").show();
+			$("body").removeClass("loading");
+		});
+*/
+	});
+
+	$("#btnNo").on("click", function(){
+		
+	});
+
+	$("#btnSiguiente").on("click", function(){
+		$("body").addClass("loading");
+		$("#inicioCuestionario").hide();
+		categoria = parseInt($("#rdBtnCategoria :checked").val());
+		idfecha_ruta = $("#inicioCuestionario").attr("name");
+		solicitarPreguntas(categoria, "6e232468a2fe79231462028282836");
+	});
+});
+
+//Para conseguir todos los controlgroup
+$("#preguntas div[id^='pregunta']")

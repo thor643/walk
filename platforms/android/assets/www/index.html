@@ -14,6 +14,7 @@
 		<script type="text/javascript" src="js/pselect.min.js"></script>
 		<script type="text/javascript" src="js/cuestionario.js"></script>
 		<script type="text/javascript" src="js/datosprueba.js"></script>
+		<script type="text/javascript" src="js/object-watch.js"></script>
 	</head>
 	<body>
 		<div class="modal"></div>
@@ -106,10 +107,6 @@
 				<div style="overflow-y: scroll;" id="mapaRuta"></div>
 			</div>
 
-			<div style="overflow-y: scroll" id="cuestionario">
-				<h1>Cuestionario</h1>
-			</div>
-
 			<div style="overflow-y: scroll" id="pruebas">
 				<h1>Pruebas</h1><br>
 			</div>
@@ -134,28 +131,35 @@
 			</div>
 
 			<div data-role="main" class="ui-content" style="overflow-y: scroll">
-				<legend id="lgndTitulo">¡Hola! Parece que has realizado esta ruta a pie hace menos de 24 horas. ¿Es correcto?</legend>
-				<div id="mapaCuestionario"></div>
-				<div id="btnsCuestionario">
-					<button type="button" id="btnSi">Sí</button>
-					<button type="button" id="btnNo">No</button>
+				<div id="inicioCuestionario">
+					<legend id="lgndTitulo">¡Hola! Parece que has realizado esta ruta a pie hace menos de 24 horas. ¿Es correcto?</legend>
+					<div style="overflow-y: scroll;" id="mapaCuestionario"></div>
+					<div id="btnsCuestionario">
+						<button type="button" id="btnSi">Sí</button>
+						<button type="button" id="btnNo">No</button>
+					</div>
+					<div id="categorias">
+						<form>
+							<fieldset data-role="controlgroup" id="rdBtnCategoria">
+								<legend>Esta ruta a pie, ¿por qué razón la has realizado? Si hay varias razones, escoge por favor la más importante:</legend>
+								<label for="cat1"></label>
+								<input type="radio" name="rdBtnCategoria" id="cat1" value="1" checked>
+								<label for="cat2"></label>
+								<input type="radio" name="rdBtnCategoria" id="cat2" value="2">
+								<label for="cat3"></label>
+								<input type="radio" name="rdBtnCategoria" id="cat3" value="3">
+								<label for="cat4"></label>
+								<input type="radio" name="rdBtnCategoria" id="cat4" value="4">
+								<label for="cat5"></label>
+								<input type="radio" name="rdBtnCategoria" id="cat5" value="5">
+							</fieldset>
+						</form>
+					</div>
+					<button type="button" id="btnSiguiente">Siguiente</button>
 				</div>
-				<div id="categorias">
-					<form>
-						<fieldset data-role="controlgroup" id="rdBtnCategoria">
-							<legend>Esta ruta a pie, ¿por qué razón la has realizado? Si hay varias razones, escoge por favor la más importante:</legend>
-							<label for="cat1"></label>
-							<input type="radio" name="rdBtnCategoria" id="cat1" value="1" checked>
-							<label for="cat2"></label>
-							<input type="radio" name="rdBtnCategoria" id="cat2" value="2">
-							<label for="cat3"></label>
-							<input type="radio" name="rdBtnCategoria" id="cat3" value="3">
-							<label for="cat4"></label>
-							<input type="radio" name="rdBtnCategoria" id="cat4" value="4">
-							<label for="cat5"></label>
-							<input type="radio" name="rdBtnCategoria" id="cat5" value="5">
-						</fieldset>
-					</form>
+				<div id="cuestionario">
+					<form id="preguntas"></form>
+					<button type="button" id="btnEnviarCuestionario" >Enviar cuestionario</button>
 				</div>
 			</div>
 		</div>
