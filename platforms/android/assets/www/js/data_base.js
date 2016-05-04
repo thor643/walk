@@ -74,6 +74,7 @@ function existeUsuario(){
 				activarNotificacionDiaria();
 			}else{
 				window.location.href="#textoInicial";
+				rellenarSelect();
 				$("body").removeClass("loading");
 			}
 		});
@@ -421,16 +422,16 @@ function aumentarCuantas(idruta){
 }
 
 function enviarRuta(idfecha_ruta){
-	var rutaFecha;
+	/*var rutaFecha;
 	var puntos_intermedios = new Array();
 	var punto_inicio;
 	var punto_fin;
 	var idruta;
 	var idpunto_inicio;
 	var idpunto_fin;
-	var idusuario;
+	var idusuario;*/
 	db.transaction(function(tx) {
-		tx.executeSql('SELECT * FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE en_servidor = 0 AND idfecha_ruta = ?', [idfecha_ruta], function(tx, rs) {
+		tx.executeSql('SELECT * FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE ruta.en_servidor = 0 AND idfecha_ruta = ?', [idfecha_ruta], function(tx, rs) {
 			console.log(rs.rows.length);
 			if (rs.rows.length != 0) {
 				idruta = rs.rows.item(0).idruta;
@@ -447,69 +448,81 @@ function enviarRuta(idfecha_ruta){
 				hora = rs.rows.item(0).hora;
 				console.log("SELECT 1");
 				rutaFecha = {idruta:idruta,duracion:duracion,distancia_recorrida:distancia_recorrida,categoria:categoria,cuantas:cuantas,municipio_inicio:municipio_inicio,punto_inicio:idpunto_inicio,municipio_fin:municipio_fin,punto_fin:idpunto_fin,copia_de:copia_de,idfecha_ruta:idfecha_ruta, dia:dia,hora:hora};
-			}
-			console.log("RUTA: " + idruta);
-			tx.executeSql('SELECT * FROM punto_intermedio INNER JOIN punto ON punto_intermedio.idpunto = punto.idpunto WHERE idruta = ? ORDER BY orden ASC', [idruta], function(tx, rs) {
-				console.log(rs.rows.length);
 				console.log("RUTA: " + idruta);
-				if (rs.rows.length != 0) {
-					data = rs.rows;
-					for (var i = 0; i < data.length; i++) {
-						idpunto = data.item(i).idpunto;
-						latitud = data.item(i).latitud;
-						longitud = data.item(i).longitud;
-						precision = data.item(i).precision;
-						orden = data.item(i).orden;
-						hora = data.item(i).hora;
-						console.log("SELECT 2");
-						puntos_intermedios.push({idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision,orden:orden,hora:hora});
-					}
-					console.log("PUNTO INICIO: " + idpunto_inicio);
-					tx.executeSql('SELECT latitud, longitud, precision FROM punto WHERE idpunto = ?', [idpunto_inicio], function(tx, rs) {
-						console.log(rs.rows.length);
+				tx.executeSql('SELECT * FROM punto_intermedio INNER JOIN punto ON punto_intermedio.idpunto = punto.idpunto WHERE idruta = ? ORDER BY orden ASC', [idruta], function(tx, rs) {
+					console.log(rs.rows.length);
+					console.log("RUTA: " + idruta);
+					if (rs.rows.length != 0) {
+						data = rs.rows;
+						puntos_intermedios = new Array();
+						for (var i = 0; i < data.length; i++) {
+							idpunto = data.item(i).idpunto;
+							latitud = data.item(i).latitud;
+							longitud = data.item(i).longitud;
+							precision = data.item(i).precision;
+							orden = data.item(i).orden;
+							hora = data.item(i).hora;
+							console.log("SELECT 2");
+							puntos_intermedios.push({idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision,orden:orden,hora:hora});
+						}
 						console.log("PUNTO INICIO: " + idpunto_inicio);
-						if (rs.rows.length != 0) {
-							data = rs.rows;
-							idpunto = data.item(0).idpunto;
-							latitud = data.item(0).latitud;
-							longitud = data.item(0).longitud;
-							precision = data.item(0).precision;
-							console.log("SELECT 3");
-							punto_inicio = {idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision};
-						}
-					});
-					console.log("PUNTO FIN: " + idpunto_fin);
-					tx.executeSql('SELECT latitud, longitud, precision FROM punto WHERE idpunto = ?', [idpunto_fin], function(tx, rs) {
-						console.log(rs.rows.length);
-						console.log("PUNTO FIN: " + idpunto_fin);
-						if (rs.rows.length != 0) {
-							data = rs.rows;
-							idpunto = data.item(0).idpunto;
-							latitud = data.item(0).latitud;
-							longitud = data.item(0).longitud;
-							precision = data.item(0).precision;
-							console.log("SELECT 4");
-							punto_fin = {idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision};
-						}
-					});
-					tx.executeSql('SELECT idusuario FROM usuario', [], function(tx, rs) {
-						if (rs.rows.length != 0) {
-							idusuario = rs.rows.item(0).idusuario;
-						}
-					});
-				}
-			});
+						tx.executeSql('SELECT latitud, longitud, precision FROM punto WHERE idpunto = ?', [idpunto_inicio], function(tx, rs) {
+							console.log(rs.rows.length);
+							console.log("PUNTO INICIO: " + idpunto_inicio);
+							if (rs.rows.length != 0) {
+								data = rs.rows;
+								idpunto = data.item(0).idpunto;
+								latitud = data.item(0).latitud;
+								longitud = data.item(0).longitud;
+								precision = data.item(0).precision;
+								console.log("SELECT 3");
+								punto_inicio = {idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision};
+
+								console.log("PUNTO FIN: " + idpunto_fin);
+								tx.executeSql('SELECT latitud, longitud, precision FROM punto WHERE idpunto = ?', [idpunto_fin], function(tx, rs) {
+									console.log(rs.rows.length);
+									console.log("PUNTO FIN: " + idpunto_fin);
+									if (rs.rows.length != 0) {
+										data = rs.rows;
+										idpunto = data.item(0).idpunto;
+										latitud = data.item(0).latitud;
+										longitud = data.item(0).longitud;
+										precision = data.item(0).precision;
+										console.log("SELECT 4");
+										punto_fin = {idpunto:idpunto,latitud:latitud,longitud:longitud,precision:precision};
+
+										tx.executeSql('SELECT idusuario FROM usuario', [], function(tx, rs) {
+											if (rs.rows.length != 0) {
+												idusuario = rs.rows.item(0).idusuario;
+												datos = [{rutaFecha: rutaFecha},{puntos_intermedios:puntos_intermedios},{punto_inicio:punto_inicio},{punto_fin:punto_fin},{idusuario:idusuario}];
+												datosJSON = JSON.stringify(datos);
+												console.log(datosJSON);
+												$.ajax({type: "POST",
+														url: "http://galan.ehu.eus/dpuerto001/WEB/enviarRuta.php",
+														data: {dato:datosJSON},
+														success: function(data){console.log("ENVIADO"); /*Poner atributo en_servidor a 1 en la ruta enviada*/},
+														error: function(e){console.log("ERROR");}
+												});
+											}
+										});
+									}
+								});
+							}
+						});
+					}
+				});
+			}
 		});
 	}, function(err){console.log("ERROR: " + err.message);}, function(){
-		datos = [{rutaFecha: rutaFecha},{puntos_intermedios:puntos_intermedios},{punto_inicio:punto_inicio},{punto_fin:punto_fin},{idusuario:idusuario}];
+		/*datos = [{rutaFecha: rutaFecha},{puntos_intermedios:puntos_intermedios},{punto_inicio:punto_inicio},{punto_fin:punto_fin},{idusuario:idusuario}];
 		datosJSON = JSON.stringify(datos);
 		console.log(datosJSON);
 		$.ajax({type: "POST",
 				url: "http://galan.ehu.eus/dpuerto001/WEB/enviarRuta.php",
 				data: {dato:datosJSON},
-				success: function(data){console.log("ENVIADO"); /*Poner atributo en_servidor a 1 en la ruta enviada*/},
+				success: function(data){console.log("ENVIADO");},
 				error: function(e){console.log("ERROR");}
-		});
+		});*/
 	});
 }
 

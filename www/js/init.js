@@ -7,20 +7,22 @@ var opcion = {seguimiento:false};
 
 document.addEventListener("deviceready", onDeviceReady, false);
 function onDeviceReady() {
-	opcion.watch('seguimiento', function(id, oldval, newval){
+	/*opcion.watch('seguimiento', function(id, oldval, newval){
 		if (!newval) {
 			pararSeguimiento();
 			iniciarSeguimiento();
 		}
-	});
-	cordova.plugins.notification.local.cancelAll(function(){alert("done");},this);
+	});*/
+	cordova.plugins.notification.local.cancelAll(function(){},this);
 	configurarBackgroundGeoLocation();
     backgroundGeoLocation.watchLocationMode(locationCheck);
 	$("body").addClass("loading");
-	rellenarSelect();
 	abrirBD();
 	existeBD();
-	activarNotificacionMensual();
+	//activarNotificacionMensual();
+	cordova.plugins.notification.local.on("trigger", onTrigger);
+	cordova.plugins.notification.local.on("click", onNotificationClick);
+
 
 	document.addEventListener("backbutton", onBackKeyDown, false);
 }
@@ -31,6 +33,21 @@ function locationCheck(enabled){
 		if (showSettings == true) {
     		backgroundGeoLocation.showLocationSettings();
 		}
+	}
+}
+
+function onTrigger(notification){
+	
+	if(notification.id == 1){
+		cordova.plugins.notification.local.clear(1, function(){console.log("Notificacion id " + notification.id + " quitada");});
+		obtenerHoraCuestionario();
+	}
+}
+
+function onNotificationClick(notification){
+	if (notification.id == 10) {
+		parseado = JSON.parse(notification.data);
+		realizarCuestionario(parseado.idruta, parseado.idfecha_ruta);
 	}
 }
 
@@ -177,6 +194,7 @@ function activarNotificacionDiaria(){
 	}, function(err){console.log("ERROR: " + err.message);}, function(){});
 }
 
+/*
 function activarNotificacionMensual(){
 	fecha = new Date();
 	en_un_mes = new Date(fecha.getTime() + 2592000*1000);
@@ -187,7 +205,7 @@ function activarNotificacionMensual(){
 		at: en_un_mes
 	});
 }
-
+*/
 /*
 *
 * Pruebas

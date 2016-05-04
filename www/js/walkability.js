@@ -146,14 +146,19 @@ $(document).ready(function(e) {
                 $("#btnBorrar").on( "click", function() {
                     window.sqlitePlugin.deleteDatabase({name: 'walkability.db', location: 1}, successcb, errorcb);
                 });
-
+                /*
                 $(document).on("pageshow","#app",function(){ // When entering pagetwo
                     initMap();
-                });
+                }); */
 
                 $(document).on("pagehide", "#textoInicial", function() {
+                    initMap();
                     $("body").removeClass("loading");
-                })
+                });
+
+                $(document).on("pagehide", "#testInicial", function() {
+                    initMap();
+                });
 
                 $("#slcRutas").on("change", function(){
                     valor = $("#slcRutas option:selected").val();

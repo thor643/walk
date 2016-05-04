@@ -17,7 +17,7 @@ function recuperarRutasRealizadas(hora){
 	mesHoy = fecha.getMonth() + 1;
 	anyoHoy = fecha.getFullYear();
 	fechaHoy = (anyoHoy * 10000) + (mesHoy * 100) + diaHoy;
-	fechaAyer = fechaAyer(diaHoy, mesHoy, anyoHoy);
+	fechaAyer = diaAnterior(diaHoy, mesHoy, anyoHoy);
 
 	//Para pruebas
 	console.log("Fecha hoy: " + fechaHoy);
@@ -25,7 +25,7 @@ function recuperarRutasRealizadas(hora){
 	console.log("Hora: " + hora);
 
 	db.transaction(function (tx) {
-		tx.executeSql('SELECT idruta FROM  fecha_ruta WHERE (dia = ? AND hora >= ?) OR (dia = ? AND hora =< ?)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
+		tx.executeSql('SELECT idruta FROM  fecha_ruta WHERE (dia = ? AND hora >= ?) OR (dia = ? AND hora <= ?)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
 			if (rs.rows.length > 0) {
 				recuperarRutasRealizadasNuevas(fechaAyer, fechaHoy, hora);
 			}
@@ -33,7 +33,7 @@ function recuperarRutasRealizadas(hora){
 	}, function(err){console.log("ERROR: " + err.message);}, function () {});
 }
 
-function fechaAyer(dia, mes, anyo){
+function diaAnterior(dia, mes, anyo){
 
 	diaAyer = dia - 1;
 
@@ -71,13 +71,19 @@ var rutasRecuperadas;
 
 function recuperarRutasRealizadasNuevas(fechaAyer, fechaHoy, hora){
 	db.transaction(function (tx) {
-		tx.executeSql('SELECT fecha_ruta.idruta, fecha_ruta.idfecha_ruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE (dia = ? AND hora >= ? AND categoria is NULL AND en_servidor is NULL) OR (dia = ? AND hora <= ?  AND categoria is NULL AND en_servidor is NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
+		tx.executeSql('SELECT fecha_ruta.idruta, fecha_ruta.idfecha_ruta FROM fecha_ruta INNER JOIN ruta ON fecha_ruta.idruta = ruta.idruta WHERE (dia = ? AND hora >= ? AND categoria is NULL AND ruta.en_servidor is NULL) OR (dia = ? AND hora <= ?  AND categoria is NULL AND ruta.en_servidor is NULL)', [fechaAyer, hora, fechaHoy, hora], function(tx, rs){
 			if (rs.rows.length > 0) {
 				rutasRecuperadas = rs.rows;
 				if (rutasRecuperadas.length == 1) {
 					//Comprobar si esta activa la notificacion. Si esta activa, realizar cuestionario. Sino, activar
-					cordova.plugins.notification.local.isScheduled(10, function(a){if(a){console.log("YES");}else{console.log("NO");}})
-					realizarCuestionario(rutasRecuperadas.item(0).idruta, rutasRecuperadas.item(0).idfecha_ruta);
+					cordova.plugins.notification.local.isScheduled(10, function(a){
+						if(a){
+							realizarCuestionario(rutasRecuperadas.item(0).idruta, rutasRecuperadas.item(0).idfecha_ruta);
+						}else{
+							activarNotificacionCuestionario(rutasRecuperadas.item(0).idruta, rutasRecuperadas.item(0).idfecha_ruta);
+						}
+					});
+					
 				} else {
 					var aleatorio = Math.round(Math.random()*rutasRecuperadas.length);
 					if (aleatorio == data.length) {
@@ -141,6 +147,7 @@ function verificarMensualidad(idruta, fechaHoy){
 var elegida = true;
 
 function realizarCuestionario(idruta, idfecha_ruta){
+
 	$("body").addClass("loading");
 	//cambiar redireccion
 	window.location.href="#cuestionarioPage";
@@ -158,13 +165,12 @@ function realizarCuestionarioMensual(){
 
 }
 
-function activarNotificacionCuestionario(){
-	fecha = new Date();
-	en_un_mes = new Date(fecha.getTime() + 2592000);
+function activarNotificacionCuestionario(idruta, idfecha_ruta){
 	cordova.plugins.notification.local.schedule({
 		text: "Tienes una ruta pendiente de valoración",
 		id: 10,
-		every: "hour"
+		every: "hour",
+		data: {idruta: idruta, idfecha_ruta: idfecha_ruta}
 	});
 }
 
@@ -187,9 +193,9 @@ function solicitarPreguntas(categoria, idfecha_ruta){
 						}
 
 						//Pruebas
-						categoria = 4;
+						/*categoria = 4;
 						genero = 0;
-						horario = 1;
+						horario = 1;*/
 
 						datos = [{categoria:categoria, genero:genero, horario:horario}];
 						datosJSON = JSON.stringify(datos);
@@ -299,7 +305,8 @@ $(document).ready(function(e) {
 		$("#inicioCuestionario").hide();
 		categoria = parseInt($("#rdBtnCategoria :checked").val());
 		idfecha_ruta = $("#inicioCuestionario").attr("name");
-		solicitarPreguntas(categoria, "6e232468a2fe79231462028282836");
+		//solicitarPreguntas(categoria, "6e232468a2fe79231462028282836");
+		solicitarPreguntas(categoria, idfecha_ruta);
 	});
 });
 

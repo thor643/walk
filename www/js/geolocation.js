@@ -26,6 +26,20 @@ var punto_parada;
 var rutas = new Array();
 
 
+function iniciarSeguimiento(){
+    // Turn ON the background-geolocation system.  The user will be tracked whenever they suspend the app. 
+    backgroundGeoLocation.start();
+    opcion.seguimiento = true;
+    mostrarTexto("Seguimiento iniciado<br>");
+    console.log("Seguimiento iniciado");
+}
+
+function pararSeguimiento(){
+    backgroundGeoLocation.stop();
+    mostrarTexto("Seguimiento parado<br>");
+    console.log("Seguimiento parado");
+}
+
 function configurarBackgroundGeoLocation(){
 
     var callbackFn = function(location) {
@@ -197,145 +211,25 @@ function configurarBackgroundGeoLocation(){
     }
 
     // BackgroundGeoLocation is highly configurable. See platform specific configuration options 
-    backgroundGeoLocation.configure(callbackFn, failureFn, {
+    /*backgroundGeoLocation.configure(callbackFn, failureFn, {
         desiredAccuracy: 10,
         stationaryRadius: 50,
         distanceFilter: 10,
         locationTimeout: 30,
         debug:true,
         stopOnTerminate: true // <-- enable this to clear background location settings when the app terminates 
+    });*/
+
+    backgroundGeoLocation.configure(callbackFn, failureFn, {
+        desiredAccuracy: 10,
+        stationaryRadius: 30,
+        debug: true,
+        stopOnTerminate: true,
+        locationService: backgroundGeoLocation.service.ANDROID_FUSED_LOCATION,
+        interval: 30,
+        fastestInterval: 15,
+        activitiesInterval: 30
     });
-}
-
-function iniciarSeguimiento(){
-    // Turn ON the background-geolocation system.  The user will be tracked whenever they suspend the app. 
-    backgroundGeoLocation.start();
-    opcion.seguimiento = true;
-    mostrarTexto("Seguimiento iniciado<br>");
-    console.log("Seguimiento iniciado");
-}
-
-function pararSeguimiento(){
-    backgroundGeoLocation.stop();
-    mostrarTexto("Seguimiento parado<br>");
-    console.log("Seguimiento parado");
-}
-
-//Constructor punto
-function Punto(latitud, longitud, precision){
-    this.latitud = latitud;
-    this.longitud = longitud;
-    this.precision = precision;
-    var tiempo = new Date();
-    this.hora = tiempo.toLocaleTimeString();
-    uuid = device.uuid;
-    this.identificador = uuid.concat(tiempo.getTime());
-
-    this.distanciaConmigo = function(lati, longi){
-
-        var punto1 = new google.maps.LatLng(this.latitud, this.longitud);
-        var punto2 = new google.maps.LatLng(lati, longi);
-
-        var distancia = google.maps.geometry.spherical.computeDistanceBetween(punto1, punto2);
-        return distancia;
-    }
-}
-
-function crearYAlmacenarPunto(latitude, longitude, accuracy, latlon){
-    
-    //Se crea un nuevo punto
-    punto = new Punto(latitude, longitude, accuracy);
-    //Se inserta al final del array ruta
-    ruta.push(punto);
-    //Se inserta el objeto Latlon en el array con las coordenadas del punto
-    pathRuta.push(latlon);
-
-    //Para pruebas
-    mostrarTexto('Hora: '+ punto.hora +' - Coordenada: ' + latlon + '<br>');
-
-    if (estado == 2) {
-        //Se comprueba la distancia entre el punto actual y el anterior. Al haber sido insertado el actual, se debe comprobar la distancia con el penultimo introducido
-        distanciaTotal = google.maps.geometry.spherical.computeLength(pathRuta);
-        //Se comprueba la distancia total de la ruta hasta el momento. Si la distancia es superior a la establecida, se pasa al estado 3
-        if (distanciaTotal > 500) {
-            estado = 3;
-
-            //Para pruebas
-            mostrarTexto('Estado 3<br>');
-
-        }
-    }
-    activarTempPunto();    
-}
-
-function activarTempPunto(){
-
-    temporizadorPunto = setTimeout(function(){ 
-                                    
-                                    //Para pruebas
-                                    console.log("Tiempo máximo de espera de punto excedido");
-                                    tiempo = new Date();
-                                    hora = tiempo.toLocaleTimeString();
-                                    mostrarTexto('Hora: ' + hora + ' - Tiempo espera excedido<br>');
-
-                                    if (estado == 3) {
-                                        //ALMACENAR RUTA EN BD
-                                        anadirRuta(ruta, distanciaTotal, 0);     
-                                    }
-
-                                    //Para pruebas
-                                    rutas.push(ruta);
-
-                                    estado = 1;
-                                    temporizadorPunto = 0;
-                                    opcion.seguimiento = false;
-                                    //backgroundGeoLocation.finish();
-                                }, 900000);
-
-    //Para pruebas
-    tiempo = new Date();
-    hora = tiempo.toLocaleTimeString();
-    mostrarTexto('Hora: ' + hora +'Temporizador ' + temporizadorPunto + ' activo<br>');
-
-}
-
-function activarTempParada(latitude, longitude, accuracy, latlon){
-
-    //Se activa el temporizador. Si el temporizador llega a 0, se pasa al estado 1
-    temporizadorParada = setTimeout(function() {
-
-                                    //Para pruebas
-                                    console.log("Tiempo máximo de parada excedido");
-                                    tiempo = new Date();
-                                    hora = tiempo.toLocaleTimeString();
-                                    mostrarTexto('Hora: ' + hora + ' - Tiempo parada excedido<br>');
-
-                                    if (estado == 3) {
-                                        //ALMACENAR RUTA EN BD
-                                        anadirRuta(ruta, distanciaTotal,0);
-                                    }
-
-                                    //Para pruebas
-                                    rutas.push(ruta);
-
-                                    estado = 1;
-                                    temporizadorParada = 0;
-                                    //backgroundGeoLocation.finish();
-                                    pararSeguimiento();
-                                    iniciarSeguimiento();
-                                    //PONER VARIABLE tiempo_parada
-                                }, 300000);
-
-    //Para pruebas
-    console.log("Temporizador de parada activo");
-    tiempo = new Date();
-    hora = tiempo.toLocaleTimeString();
-    mostrarTexto('Hora: ' + hora + ' - Parada activa<br>');
-
-    //Se crea y almacena un nuevo punto
-    crearYAlmacenarPunto(latitude, longitude, accuracy, latlon);
-    //Se almacena el último punto para tomarlo como referencia
-    punto_parada = ruta[ruta.length-1]; 
 }
 
 function velocidadMaxSuperada(latitude, longitude, accuracy, latlon){
@@ -415,6 +309,137 @@ function velocidadMaxNoSuperada(latitude, longitude, accuracy, latlon, velocidad
         }
     }
 }
+
+
+//Constructor punto
+function Punto(latitud, longitud, precision){
+    this.latitud = latitud;
+    this.longitud = longitud;
+    this.precision = precision;
+    var tiempo = new Date();
+    this.hora = tiempo.toLocaleTimeString();
+    uuid = device.uuid;
+    this.identificador = uuid.concat(tiempo.getTime());
+
+    this.distanciaConmigo = function(lati, longi){
+
+        var punto1 = new google.maps.LatLng(this.latitud, this.longitud);
+        var punto2 = new google.maps.LatLng(lati, longi);
+
+        var distancia = google.maps.geometry.spherical.computeDistanceBetween(punto1, punto2);
+        return distancia;
+    }
+}
+
+function crearYAlmacenarPunto(latitude, longitude, accuracy, latlon){
+    
+    //Se crea un nuevo punto
+    punto = new Punto(latitude, longitude, accuracy);
+    //Se inserta al final del array ruta
+    ruta.push(punto);
+    //Se inserta el objeto Latlon en el array con las coordenadas del punto
+    pathRuta.push(latlon);
+
+    //Para pruebas
+    mostrarTexto('Hora: '+ punto.hora +' - Coordenada: ' + latlon + '<br>');
+
+    if (estado == 2) {
+        //Se comprueba la distancia entre el punto actual y el anterior. Al haber sido insertado el actual, se debe comprobar la distancia con el penultimo introducido
+        distanciaTotal = google.maps.geometry.spherical.computeLength(pathRuta);
+        //Se comprueba la distancia total de la ruta hasta el momento. Si la distancia es superior a la establecida, se pasa al estado 3
+        if (distanciaTotal > 500) {
+            estado = 3;
+
+            //Para pruebas
+            mostrarTexto('Estado 3<br>');
+
+        }
+    }
+    activarTempPunto();    
+}
+
+function activarTempPunto(){
+
+    temporizadorPunto = setTimeout(function(){ 
+                                    estadoAnterior = estado;
+                                    estado = 1;
+
+                                    //Para pruebas
+                                    console.log("Tiempo máximo de espera de punto excedido");
+                                    tiempo = new Date();
+                                    hora = tiempo.toLocaleTimeString();
+                                    mostrarTexto('Hora: ' + hora + ' - Tiempo espera excedido<br>');
+
+                                    if (estadoAnterior == 3) {
+                                        //ALMACENAR RUTA EN BD
+                                        anadirRuta(ruta, distanciaTotal, 0);     
+                                    }
+
+                                    //Para pruebas
+                                    rutas.push(ruta);
+
+                                    for (var i = 0; i < 2; i++) {
+                                        $("#btnSeguimiento").trigger("click");
+                                    }
+
+                                    //opcion.seguimiento = false;
+
+                                    //backgroundGeoLocation.finish();
+                                }, 900000);
+
+    //Para pruebas
+    tiempo = new Date();
+    hora = tiempo.toLocaleTimeString();
+    mostrarTexto('Hora: ' + hora +'Temporizador ' + temporizadorPunto + ' activo<br>');
+
+}
+
+function activarTempParada(latitude, longitude, accuracy, latlon){
+
+    //Se activa el temporizador. Si el temporizador llega a 0, se pasa al estado 1
+    temporizadorParada = setTimeout(function() {
+                                    estadoAnterior = estado;
+                                    estado = 1;
+
+                                    //Para pruebas
+                                    console.log("Tiempo máximo de parada excedido");
+                                    tiempo = new Date();
+                                    hora = tiempo.toLocaleTimeString();
+                                    mostrarTexto('Hora: ' + hora + ' - Tiempo parada excedido<br>');
+
+                                    if (estadoAnterior == 3) {
+                                        //ALMACENAR RUTA EN BD
+                                        anadirRuta(ruta, distanciaTotal,0);
+                                    }
+
+                                    //Para pruebas
+                                    rutas.push(ruta);
+
+                                    //backgroundGeoLocation.finish();
+                                    
+                                    for (var i = 0; i < 2; i++) {
+                                        $("#btnSeguimiento").trigger("click");
+                                        mostrarTexto("AUTO<br>");
+                                    }
+
+                                    //opcion.seguimiento = false; 
+                                    
+                                    //PONER VARIABLE tiempo_parada
+                                }, 300000);
+
+    //Para pruebas
+    console.log("Temporizador de parada activo");
+    tiempo = new Date();
+    hora = tiempo.toLocaleTimeString();
+    mostrarTexto('Hora: ' + hora + ' - Parada activa<br>');
+
+    //Se crea y almacena un nuevo punto
+    crearYAlmacenarPunto(latitude, longitude, accuracy, latlon);
+    //Se almacena el último punto para tomarlo como referencia
+    punto_parada = ruta[ruta.length-1]; 
+}
+
+
 
 /*
 *
