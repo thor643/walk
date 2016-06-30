@@ -1,32 +1,36 @@
 /*
-*
-*
-*
+* En este archivo se encuentra la lógica relacionada con la inicialización de la aplicación
+* Proyecto: Walkability Capturer
+* Autor: David Puerto Caldero
 */
-var opcion = {seguimiento:false};
 
+//El evento deviceready es lanzado por el dispositivo tras cargar todo lo necesario para su funcionamiento. Hasta que no se lanza, los plugins no se encuentran disponibles
 document.addEventListener("deviceready", onDeviceReady, false);
+
+//Tras lanzarse el evento deviceready, se ejecuta la siguient función
 function onDeviceReady() {
-	/*opcion.watch('seguimiento', function(id, oldval, newval){
-		if (!newval) {
-			pararSeguimiento();
-			iniciarSeguimiento();
-		}
-	});*/
+	//Por si hubiera alguna notificación activa, se cancelan todas
 	cordova.plugins.notification.local.cancelAll(function(){},this);
+	//Se configura la geolocalización (geolocation.js)
 	configurarBackgroundGeoLocation();
-    backgroundGeoLocation.watchLocationMode(locationCheck);
+	//Esta utilidad proporcionada por el plugin de geolocalización permite controlar si la localización está activa en el dispositivo.
+    backgroundGeoLocation.isLocationEnabled(locationCheck, fail);
+    backgroundGeoLocation.watchLocationMode(locationCheck, fail);
+	//Para evitar que el usuario utilice la aplicación antes de que esté disponible, se muestra una pantalla de espera
 	$("body").addClass("loading");
+	//Se solicita la apertura de la BD y también su creación en el caso de que no exista (data_base.js)
 	abrirBD();
+	//Se comprueba si la BD contiene un esquema de tablas o no
 	existeBD();
-	//activarNotificacionMensual();
+	//Se definen dos eventlistener para las notificaciones.
 	cordova.plugins.notification.local.on("trigger", onTrigger);
 	cordova.plugins.notification.local.on("click", onNotificationClick);
 
-
+	//Con el evento backbutton se controla la acción del botón atrás en Android 
 	document.addEventListener("backbutton", onBackKeyDown, false);
 }
 
+//Si la localización está desactivada en el dispositivo, solicita al usuario abrir los ajustes y activarla
 function locationCheck(enabled){
 	if (!enabled) {
 		var showSettings = window.confirm("Ubicación desactivada. ¿Puedo abrir los ajustes de localización?");
@@ -36,35 +40,53 @@ function locationCheck(enabled){
 	}
 }
 
+function fail() {
+	console.log("SETTING NOT FOUND EXCEPTION");
+}
+
+//Cuando una notificación es lanzada
 function onTrigger(notification){
-	
+	//Se comprueba que sea la diaria (por defecto tiene el ID 1)
 	if(notification.id == 1){
-		cordova.plugins.notification.local.clear(1, function(){console.log("Notificacion id " + notification.id + " quitada");});
-		obtenerHoraCuestionario();
+		//Se cancela para que no se muestre y no molestar al usuario en caso de que no tenga nada pendiente de valorar
+		cordova.plugins.notification.local.cancel(1, function(){
+			console.log("Notificacion id " + notification.id + " quitada");
+			//Se vuelve a programar para el día siguiente (data_base.js)
+			reactivarNotificacionDiaria();
+			//Se comprueba si hay alguna ruta que valorar (cuestionario.js)
+			obtenerHoraCuestionario();
+		});
+		
 	}
 }
 
+//Cuando se hace click en una notificación
 function onNotificationClick(notification){
+	//Se comprueba que sea la lanzada tras detectar que hay rutas pendientes de valoración (por defecto tiene el ID 10)
 	if (notification.id == 10) {
+		//La notificación almacena en formato JSON el ID de la ruta y el de la fecha_ruta. Se transforma a texto
 		parseado = JSON.parse(notification.data);
+		//Tras la transformación a texto, se lanza el cuestionario (cuestionario.js)
 		realizarCuestionario(parseado.idruta, parseado.idfecha_ruta);
 	}
 }
 
-function onBackKeyDown() { alert('Back button clicked!'); }
+function onBackKeyDown() { alert('Para el correcto funcionamiento de la app este botón ha sido desactivado'); }
 
+//Genera el select de los años de nacimiento
 function rellenarSelect(){
     var anyos = document.getElementById("anyoNacimiento");
     var cont = 1;
     var fecha = new Date();
-    var anyo = fecha.getFullYear() + 1; 
+    var anyo = fecha.getFullYear() - 9; 
     anyos.options[0] = new Option("Seleccione un año", -1, true);
-    for (var i = 1900; i < anyo; i++) {
+    for (var i = anyo; i > (fecha.getFullYear() - 90); i--) {
         anyos.options[cont] = new Option(i, i);
         cont++;
     }
 }
 
+//En caso de que el usuario no encuentre su municipio, se le muestra un campo de texto libre
 function showContent() {
 	element = document.getElementById("content");
 	check = document.getElementById("check");
@@ -75,6 +97,55 @@ function showContent() {
 	}
 }
 
+//Mediante jQuery se controla que ningún campo de los datos necesarios del usuario esté vacío
+$(document).ready(function(e) {
+
+	$(".ps-prov option[value=01]").removeAttr("selected");
+	$(".ps-prov option[value=-1]").attr("selected", "selected");
+
+	$("#botonTest").on("click", function(){
+		//Se comprueba si se ha seleccionado un año
+		if ($("#anyoNacimiento option:selected").val() == -1) {
+			alert("Por favor, seleccione un año");
+		} else {
+			//Se comprueba si se ha seleccionado una hora
+			if ($("#hora").val().length == 0) {
+				alert("Por favor, seleccione una hora")
+			} else {
+				//En caso de que se haya seleccionado el checkbox
+				if ($("#check").prop('checked')) {
+					//Se comprueba que el area de texto no esté vacío
+					municipio = $("#municipio").val(); 
+					if (municipio.length == 0 || /^\s+$/.test(municipio)) {
+						alert("Por favor, inserte un municipio");
+					} else {
+						//Se comprueba que solo se inserten letras
+						if (/^([a-zA-Z\s\xc0-\xff]+)$/i.test(municipio)) {
+							//Si está todo correcto, se muestra al usuario para que confirme los datos
+							confirmarUsuario();
+						} else {
+							alert("Por favor, utilice letras nada más");
+						}
+					}
+				} else {
+					//En caso contrario, se comprueban los selects
+					if ($(".ps-prov option:selected").val() == -1) {
+						alert("Por favor, seleccione una provincia");
+					} else {
+						if ($(".ps-mun option:selected").val() == -1) {
+							alert("Por favor, seleccione un municipio");
+						} else {
+							//Si está todo correcto, se muestra al usuario para que confirme los datos
+							confirmarUsuario();		
+						}
+					}	
+				}
+			}
+		}
+	});
+});
+
+//Antes de añadir el usuario a la BD, se le muestran los datos introducidos para que los confirme
 function confirmarUsuario(){
 	genero = $("#genero label[for="+$("#genero :radio:checked").attr("id")+"]").text();
 	fechaNac = $("#anyoNacimiento option:selected").text();
@@ -90,144 +161,9 @@ function confirmarUsuario(){
 		"\n-Fecha de nacimiento: " + fechaNac +
 		"\n-Municipio: " + mun +
 		"\n-Problemas de movilidad: " + mov +
-		"\n-Horario cuestionario: " + hora, // message
-     	anadirUsuario,  // callback to invoke with index of button pressed
-    	'Confirmar datos',           // title
-    	['Sí','No']     // buttonLabels
+		"\n-Horario cuestionario: " + hora, // mensaje mostrado al usuario
+     	anadirUsuario, // callback a invocar con el ID del botón presionado (data_base.js)
+    	'Confirmar datos', // título
+    	['Sí','No'] // nombre de los botones
 	);
 }
-
-$(document).ready(function(e) {
-
-	$(".ps-prov option[value=01]").removeAttr("selected");
-	$(".ps-prov option[value=-1]").attr("selected", "selected");
-
-	$("#botonTest").on("click", function(){
-		if ($("#anyoNacimiento option:selected").val() == -1) {
-			alert("Por favor, seleccione un año");
-		} else {
-			if ($("#hora").val().length == 0) {
-				alert("Por favor, seleccione una hora")
-			} else {
-				if ($("#check").prop('checked')) {
-					//Mirar area de texto
-					municipio = $("#municipio").val(); 
-					if (municipio.length == 0 || /^\s+$/.test(municipio)) {
-						alert("Por favor, inserte un municipio");
-					} else {
-						if (/^([a-zA-Z\s\xc0-\xff]+)$/i.test(municipio)) {
-							confirmarUsuario();
-						} else {
-							alert("Por favor, utilice letras nada más");
-						}
-					}
-				} else {
-					//Mirar selects
-					if ($(".ps-prov option:selected").val() == -1) {
-						alert("Por favor, seleccione una provincia");
-					} else {
-						if ($(".ps-mun option:selected").val() == -1) {
-							alert("Por favor, seleccione un municipio");
-						} else {
-							confirmarUsuario();		
-						}
-					}	
-				}
-			}
-		}
-	});
-});
-
-function activarNotificacionDiaria(){
-	db.transaction(function(tx) {
-		tx.executeSql('SELECT realizar_cuestionario FROM configuracion WHERE idconfiguracion = 1', [], function(tx, rs) {
-			if (rs.rows.length != 0) {
-				cuestionario = rs.rows.item(0).realizar_cuestionario;
-				fecha = new Date();
-				hora = fecha.toLocaleTimeString();
-				horasMinutos = hora.slice(0,5);
-				horaMod = horasMinutos.replace(/:/g,"");
-				horaInt = parseInt(horaMod);
-
-				if (cuestionario == horaInt) {
-					momento = fecha;
-				} else {
-
-					if (cuestionario < horaInt) {
-						dia = fecha.getDate() + 1;
-					} else {
-						dia = fecha.getDate();
-					}
-
-					anyo = fecha.getFullYear();
-					mes = fecha.getMonth();
-					horaSt = cuestionario.toString();
-
-					if (horaSt.length <= 2) {
-						hora = 0;
-						minutos = cuestionario;
-					} else {
-						if (horaSt.length == 3) {
-							hora = parseInt(horaSt.substr(0,1));
-							minutos = parseInt(horaSt.substr(1,3));
-						} else {
-							hora = parseInt(horaSt.substr(0,2));
-							minutos = parseInt(horaSt.substr(2,4));
-						}
-					}
-					console.log(anyo + " " + mes+ " " + dia + " " + hora + " " + minutos);
-					momento = new Date(anyo, mes, dia, hora, minutos, 0, 0);
-					console.log(momento);
-				}
-				/*momento = new Date();
-				_5_segundos = new Date(momento.getTime() + 5*1000);
-				console.log(_5_segundos);*/
-				cordova.plugins.notification.local.schedule({
-					text: "Verificacion diaria",
-					id: 1,
-					every: "day",
-					//at: _5_segundos
-					at:momento
-				});
-			}
-		});
-	}, function(err){console.log("ERROR: " + err.message);}, function(){});
-}
-
-/*
-function activarNotificacionMensual(){
-	fecha = new Date();
-	en_un_mes = new Date(fecha.getTime() + 2592000*1000);
-	cordova.plugins.notification.local.schedule({
-		text: "Comprobación mensual de configuración",
-		id: 100,
-		every: "month",
-		at: en_un_mes
-	});
-}
-*/
-/*
-*
-* Pruebas
-*
-*/
-function pruebaRemoto(){
-	$.getJSON('http://galan.ehu.eus/dpuerto001/WEB/respuesta.php',function(data){
-				console.log(JSON.stringify(data));	
-			  	res = JSON.parse(data);
-			  });
-}
-
-var res;
-
-function pruebaAgregar(){
-	datos = [{"vel_max":"10","dist_min_ruta":"1000","tiempo_parada":"700"},{"vel_max":"20","dist_min_ruta":"2000","tiempo_parada":"400"}];
-	datosJSON = JSON.stringify(datos);
-	$.ajax({type: "POST", 
-			url: "http://galan.ehu.eus/dpuerto001/WEB/agregar.php",
-			data: {dato:datosJSON},
-			success: function(data){console.log("ENVIADO");},
-			error: function(e){console.log("ERROR");}
-			});
-}
-

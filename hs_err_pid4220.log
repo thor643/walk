@@ -1,0 +1,138 @@
+#
+# There is insufficient memory for the Java Runtime Environment to continue.
+# Native memory allocation (mmap) failed to map 1396736 bytes for card table expansion
+# Possible reasons:
+#   The system is out of physical RAM or swap space
+#   In 32 bit mode, the process size limit was hit
+# Possible solutions:
+#   Reduce memory load on the system
+#   Increase physical memory or swap space
+#   Check if swap backing store is full
+#   Use 64 bit Java on a 64 bit OS
+#   Decrease Java heap size (-Xmx/-Xms)
+#   Decrease number of Java threads
+#   Decrease Java thread stack sizes (-Xss)
+#   Set larger code cache with -XX:ReservedCodeCacheSize=
+# This output file may be truncated or incomplete.
+#
+#  Out of Memory Error (os_windows.cpp:3332), pid=4220, tid=5768
+#
+# JRE version:  (8.0_71-b15) (build )
+# Java VM: Java HotSpot(TM) Client VM (25.71-b15 mixed mode, sharing windows-x86 )
+# Failed to write core dump. Minidumps are not enabled by default on client versions of Windows
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x012fcc00):  JavaThread "Unknown thread" [_thread_in_vm, id=5768, stack(0x001d0000,0x00220000)]
+
+Stack: [0x001d0000,0x00220000],  sp=0x0021f628,  free space=317k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [jvm.dll+0x1a7f9b]
+V  [jvm.dll+0x1a0888]
+V  [jvm.dll+0x1bfcae]
+V  [jvm.dll+0x160d71]
+V  [jvm.dll+0x8ffea]
+V  [jvm.dll+0x905ad]
+V  [jvm.dll+0x99c53]
+V  [jvm.dll+0xa5bad]
+V  [jvm.dll+0x99fd5]
+V  [jvm.dll+0x98a7c]
+V  [jvm.dll+0xa7b7b]
+V  [jvm.dll+0x1574e4]
+V  [jvm.dll+0x17b6cb]
+V  [jvm.dll+0xe51f1]
+C  [java.exe+0x14c6]
+C  [java.exe+0x203a]
+C  [java.exe+0xae9f]
+C  [java.exe+0xaf29]
+C  [kernel32.dll+0x4ef1c]
+C  [ntdll.dll+0x63648]
+C  [ntdll.dll+0x6361b]
+C  0x00000000
+
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+
+Other Threads:
+
+=>0x012fcc00 (exited) JavaThread "Unknown thread" [_thread_in_vm, id=5768, stack(0x001d0000,0x00220000)]
+
+VM state:not at safepoint (not fully initialized)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+GC Heap History (0 events):
+No events
+
+Deoptimization events (0 events):
+No events
+
+Internal exceptions (0 events):
+No events
+
+Events (0 events):
+No events
+
+
+Dynamic libraries:
+0x011b0000 - 0x011e3000 	C:\ProgramData\Oracle\Java\javapath\java.exe
+0x77b20000 - 0x77c62000 	C:\Windows\SYSTEM32\ntdll.dll
+0x76ba0000 - 0x76c75000 	C:\Windows\system32\kernel32.dll
+0x75b00000 - 0x75b4b000 	C:\Windows\system32\KERNELBASE.dll
+0x75e10000 - 0x75eb1000 	C:\Windows\system32\ADVAPI32.dll
+0x77120000 - 0x771cc000 	C:\Windows\system32\msvcrt.dll
+0x77d40000 - 0x77d59000 	C:\Windows\SYSTEM32\sechost.dll
+0x77530000 - 0x775d2000 	C:\Windows\system32\RPCRT4.dll
+0x76f00000 - 0x76fc9000 	C:\Windows\system32\USER32.dll
+0x76d10000 - 0x76d5e000 	C:\Windows\system32\GDI32.dll
+0x77d60000 - 0x77d6a000 	C:\Windows\system32\LPK.dll
+0x76d90000 - 0x76e2d000 	C:\Windows\system32\USP10.dll
+0x74de0000 - 0x74f7e000 	C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_6.0.7601.18837_none_41e855142bd5705d\COMCTL32.dll
+0x770c0000 - 0x77117000 	C:\Windows\system32\SHLWAPI.dll
+0x77c90000 - 0x77caf000 	C:\Windows\system32\IMM32.DLL
+0x76e30000 - 0x76efc000 	C:\Windows\system32\MSCTF.dll
+0x784b0000 - 0x7856f000 	C:\Program Files\Java\jre1.8.0_71\bin\msvcr100.dll
+0x6c1f0000 - 0x6c5b8000 	C:\Program Files\Java\jre1.8.0_71\bin\client\jvm.dll
+0x71560000 - 0x71567000 	C:\Windows\system32\WSOCK32.dll
+0x76b60000 - 0x76b95000 	C:\Windows\system32\WS2_32.dll
+0x77c70000 - 0x77c76000 	C:\Windows\system32\NSI.dll
+0x73d80000 - 0x73db2000 	C:\Windows\system32\WINMM.dll
+0x74c00000 - 0x74c09000 	C:\Windows\system32\VERSION.dll
+0x77c80000 - 0x77c85000 	C:\Windows\system32\PSAPI.DLL
+0x50000000 - 0x5000c000 	C:\Program Files\Java\jre1.8.0_71\bin\verify.dll
+0x6d3b0000 - 0x6d3d1000 	C:\Program Files\Java\jre1.8.0_71\bin\java.dll
+0x6f900000 - 0x6f913000 	C:\Program Files\Java\jre1.8.0_71\bin\zip.dll
+0x72f80000 - 0x7306b000 	C:\Windows\system32\dbghelp.dll
+
+VM Arguments:
+jvm_args: -Xmx1024m -Xms1024m 
+java_command: <unknown>
+java_class_path (initial): .
+Launcher Type: SUN_STANDARD
+
+Environment Variables:
+JAVA_HOME=C:\Program Files\Java\jdk1.6.0_45
+_JAVA_OPTIONS=-Xmx1024m -Xms1024m
+PATH=C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files\Calibre2\;C:\Cygwin\bin;C:\Program Files\WIDCOMM\Bluetooth Software\;C:\Program Files\nodejs\;C:\Program Files\Java\jre6\bin;C:\android-sdk-windows\tools;C:\android-sdk-windows\platform-tools;C:\apache-ant-1.9.6\bin;C:\Program Files\Skype\Phone\;C:\Program Files\QuickTime\QTSystem\;C:\Program Files\Git\bin;C:\Users\David\AppData\Roaming\npm;C:\Program Files\Java\jdk1.6.0_45\bin
+USERNAME=David
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=x86 Family 6 Model 15 Stepping 13, GenuineIntel
+
+
+
+---------------  S Y S T E M  ---------------
+
+OS: Windows 7 Build 7601 (6.1.7601.23392)
+
+CPU:total 2 (2 cores per cpu, 1 threads per core) family 6 model 15 stepping 13, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, tsc
+
+Memory: 4k page, physical 3105668k(272508k free), swap 7125396k(917232k free)
+
+vm_info: Java HotSpot(TM) Client VM (25.71-b15) for windows-x86 JRE (1.8.0_71-b15), built on Dec 22 2015 17:22:59 by "java_re" with MS VC++ 10.0 (VS2010)
+
+time: Wed May 04 23:01:36 2016
+elapsed time: 0 seconds (0d 0h 0m 0s)
+

@@ -2,6 +2,7 @@
 <html>
 	<head>
 		<meta charset="utf-8">
+		<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: http: data:; script-src 'unsafe-inline' 'self' https: http: data:; connect-src * 'unsafe-inline' 'unsafe-eval'">
 		<link rel="stylesheet" href="css/bootstrap.min.css">
 		<link rel="stylesheet" href="css/jquery.mobile-1.4.5.min.css">
 		<link rel="stylesheet" type="text/css" href="css/walkability.css">
@@ -13,8 +14,6 @@
 		<script type="text/javascript" src="js/data_base.js"></script>
 		<script type="text/javascript" src="js/pselect.min.js"></script>
 		<script type="text/javascript" src="js/cuestionario.js"></script>
-		<script type="text/javascript" src="js/datosprueba.js"></script>
-		<!--<script type="text/javascript" src="js/object-watch.js"></script>-->
 	</head>
 	<body>
 		<div class="modal"></div>
@@ -39,7 +38,6 @@
 
 			<div data-role="header" class="header" data-position="fixed">
 				<h1 style="width: 100%; text-align: justify;">Walkability Capturer</h1>
-				<a id="botonTest" data-icon="arrow-r" data-iconpos="notext"></a>
 			</div>
 
 			<div data-role="main" class="ui-content">
@@ -62,7 +60,6 @@
 						<input type="text" id="municipio"></input>
 					</div>
 					<legend>¿Cuándo quiere que le avisemos para responder los cuestionarios?</legend>
-					<!--<input type="time" name="hora" id="hora" value="00:00:00" max="23:59:59" min="00:00:00" step="1">-->
 					<input type="time" id="hora" value="00:00">
 					<fieldset data-role="controlgroup" id="movilidad">
 						<legend>Y finalmente, ¿nos puedes decir si tienes algún problema de salud permanente que te suponga dificultades para desplazarte andando?</legend>
@@ -72,6 +69,10 @@
 						<input type="radio" name="problemaDesp" id="si" value="1">
 					</fieldset>
 				</form>
+			</div>
+
+			<div data-role="footer">
+				<button id="botonTest" class="ui-btn" style="margin: auto; width: 100%; font-size: 18px;">Crear usuario</button>
 			</div>
 
 		</div>
@@ -85,17 +86,11 @@
 
 			<div data-role="panel" id="panel" data-position="left" data-display="overlay">
 				<ul data-role = "listview">
-					<legend>APP FINAL</legend>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnInicio">Inicio</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnConfiguracion">Configuración</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnSeguimiento">Iniciar Geo.</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnAcerca">Acerca de...</a></li>
-					<legend>PRUEBAS</legend>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnRutas">Rutas realizadas</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnCuestionario">Cuestionario</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnPrueba">Pruebas</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnRuta">Insertar ruta</a></li>
-					<li data-icon = "false"><a href = "#" class = "panel_li" id="btnBorrar">Borrar BD</a></li>
+					<legend>MENÚ</legend>
+					<li data-icon = "false"><a href = "#" class = "panel_li" data-rel = "close" id="btnInicio">Inicio</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" data-rel = "close" id="btnConfiguracion">Configuración</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" data-rel = "close" id="btnSeguimiento">Iniciar Geo.</a></li>
+					<li data-icon = "false"><a href = "#" class = "panel_li" data-rel = "close" id="btnAcerca">Acerca de...</a></li>
 				</ul>
 			</div>
 
@@ -103,17 +98,16 @@
 				<div id="mapa" class="map"></div>
 			</div>
 
-			<div style="overflow-y: scroll" id="rutas">
-				<h1>Rutas realizadas</h1>
-				<select id="slcRutas"><option></option></select>
-				<div style="overflow-y: scroll;" id="mapaRuta"></div>
+			<div id="configuracion" style="margin-top: 10px; margin-right: 10px; margin-left: 10px;">
+				<legend id="configActual"></legend>
+				<a href="#" data-role="button" id="btnCambiarConfig" data-icon="gear" data-iconpos="right" >Cambiar horario</a>
+				<div id="cambiarConfig">
+					<input type="time" id="horaNueva" value="00:00">
+					<button type="button" id="btnGuardarHoraNueva">Guardar horario</button>
+				</div>
 			</div>
 
-			<div style="overflow-y: scroll" id="pruebas">
-				<h1>Pruebas</h1><br>
-			</div>
-
-			<div style="overflow-y: scroll; margin-top: 10px; margin-right: 10px; margin-left: 10px;" id="acerca">
+			<div id="acerca" style="overflow-y: scroll; margin-top: 10px; margin-right: 10px; margin-left: 10px;">
 				<h1 style="text-align: center;">Acerca de...</h1>
 				<p align="justify">La aplicación Walkability Capturer tiene como objetivo la investigación para la mejora de la calidad de vida urbana. Concretamente, queremos entender cuándo y por dónde camina la gente por su ciudad, y qué razones les llevan a escoger unas rutas concretas.</p>
 				<p align="justify">Instalando y usando esta aplicación nos ayudarás a avanzar en la investigación científica y ¡harás del mundo un lugar mejor! Además, al usar la aplicación podrás hacerte más consciente de tus rutas a pie y de cómo tomas tus decisiones de movilidad.</p>
@@ -122,20 +116,22 @@
 				<p align="justify">Desarrollador app: David Puerto</p>
 				<p align="justify">Contacto con el equipo investigador para solventar cualquier duda: <a href="mailto:responsable.epd@ehu.eus">responsable.epd@ehu.eus</a></p>
 			</div>
-
 		</div>
 
 		<div data-role="page" data-theme="a" id="cuestionarioPage">
 			
 			<div data-role="header" class="header" data-position="fixed">
 				<h1 style="width: 100%; text-align: justify;">Walkability Capturer</h1>
-				<a id="botonCuestionario" data-icon="arrow-r" data-iconpos="notext" ></a>
 			</div>
 
 			<div data-role="main" class="ui-content" style="overflow-y: scroll">
 				<div id="inicioCuestionario">
-					<legend id="lgndTitulo">¡Hola! Parece que has realizado esta ruta a pie hace menos de 24 horas. ¿Es correcto?</legend>
-					<div style="overflow-y: scroll;" id="mapaCuestionario"></div>
+					<div id="txtTitulo">
+						<legend id="lgndTitulo">¡Hola! Parece que has realizado esta ruta a pie hace menos de 24 horas. ¿Es correcto?</legend>
+						<legend id="horaIni"></legend>
+						<legend id="horaFin"></legend>
+					</div>
+					<div id="mapaCuestionario" style="overflow-y: scroll;"></div>
 					<div id="btnsCuestionario">
 						<button type="button" id="btnSi">Sí</button>
 						<button type="button" id="btnNo">No</button>
@@ -156,8 +152,8 @@
 								<input type="radio" name="rdBtnCategoria" id="cat5" value="5">
 							</fieldset>
 						</form>
+						<button type="button" id="btnSiguiente">Siguiente</button>
 					</div>
-					<button type="button" id="btnSiguiente">Siguiente</button>
 				</div>
 				<div id="cuestionario">
 					<form id="preguntas"></form>

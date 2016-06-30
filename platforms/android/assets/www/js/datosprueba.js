@@ -273,9 +273,10 @@ var grupo5 = [{lon:-6.1152219772338867,lat:39.2535247802734375},
 {lon:-6.1234455108642578,lat:39.2142181396484375},
 {lon:-6.1235179901123047,lat:39.2139663696289062}];
 
-function crearRutaPrueba(grupoPuntos){
-	ruta = new Array();
-	pathRuta = new Array();
+
+function crearRutaPrueba(grupoPuntos, copia_de, anadir){
+	rutaP = new Array();
+	pathRutaP = new Array();
 	hora = 0;
 	minuto = 0;
 	fecha = new Date();
@@ -284,23 +285,33 @@ function crearRutaPrueba(grupoPuntos){
 	for (var i = 0; i < grupoPuntos.length; i++) {
 		if (hora < 10) {
 			horas = "0"+hora;
+		} else {
+			horas = hora;
 		}
 		if (minuto < 10) {
 			minutos = "0"+minuto;
+		} else {
+			minutos = minuto;
 		}
 		tiempo = horas+":"+minutos;
+		console.log(tiempo);
 		latlon = new google.maps.LatLng(grupoPuntos[i].lat, grupoPuntos[i].lon);
 		punto = new PuntoPrueba(grupoPuntos[i].lat, grupoPuntos[i].lon, 10, tiempo, ""+identificador+""+i);
-		ruta.push(punto);
-		pathRuta.push(latlon);
+		rutaP.push(punto);
+		pathRutaP.push(latlon);
 		minuto = minuto + 5;
 		if (minuto == 60) {
 			minuto = 0;
 			hora = hora + 1;
 		}
 	}
-	distanciaTotal = google.maps.geometry.spherical.computeLength(pathRuta);
-	anadirRuta(ruta, distanciaTotal, 0);
+	distanciaP = google.maps.geometry.spherical.computeLength(pathRutaP);
+	
+	if (anadir) {
+		anadirRuta(rutaP, distanciaP, copia_de);
+	} else {
+		recogerRutas(rutaP, distanciaP);
+	}
 }
 
 function PuntoPrueba(latitud, longitud, precision, hora, ident){
